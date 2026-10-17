@@ -1,0 +1,29 @@
+# Android Studio, Gradle, and local SDK
+.gradle/
+**/.gradle/
+**/build/
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keys and user secrets (never commit signing credentials)
+*.keystore
+*.jks
+*.p12
+key.properties
+.env
+.env.*
+
+# Python / test cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+playwright-report/
+test-results/
+
+# OS files
+.DS_Store
+Thumbs.db

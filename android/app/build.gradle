@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The web app has one source of truth: repository root /index.html.
+// Gradle embeds this exact file into the offline Android APK at build time.
+def generatedWebAssets = layout.buildDirectory.dir('generated/sumi-assets')
+tasks.register('syncWebAssets', Copy) {
+    from(rootProject.projectDir.parentFile) {
+        include 'index.html'
+    }
+    into(generatedWebAssets)
+}
+tasks.matching { it.name.startsWith('merge') && it.name.endsWith('Assets') }.configureEach {
+    dependsOn(tasks.named('syncWebAssets'))
+}
+
+android {
+    namespace 'com.maxvfx.suminagashi'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.maxvfx.suminagashi'
+        minSdk 29
+        targetSdk 29
+        versionCode 7
+        versionName '0.3.0'
+    }
+
+    // Avoid keeping a second, potentially stale HTML copy in the repository.
+    sourceSets {
+        main {
+            assets.srcDirs = [generatedWebAssets.get().asFile]
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

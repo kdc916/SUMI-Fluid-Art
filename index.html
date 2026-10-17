@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.2.6</title>
+<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.3.0</title>
 <style>
 :root{--paper:#eae5d9;--ink:#2c2925;--muted:#867c70;--line:rgba(65,49,33,.23);--panel:rgba(246,242,233,.92);--accent:#ab5748}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{padding:0;margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -67,7 +67,7 @@ const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 const colorRGB=h=>[1,3,5].map(i=>parseInt(h.substring(i,i+2),16));
 const pigmentRGB=h=>colorRGB(h).map(v=>-Math.log(.075+.925*(v/255)));
 function toast(s){const el=document.getElementById('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),1600)}
-// SUMI v0.2.6 — clean engine assembly
+// SUMI v0.3.0 — clean engine assembly
 // SUMI v0.2.1 — WebGL2, GLSL ES 3.00, semi-Lagrangian incompressible 2D fluid.
 // Tuned for more natural sumi-ink pooling, soft capillary edges, and lingering stains.
 class GPUFluid {
@@ -137,10 +137,11 @@ class GPUFluid {
           float mask=primary+fringe+spray;
           vec4 previous=texture(uTexture,vUv);
           if(uIsVelocity>.5){
-            vec2 tangential=vec2(-offset.y,offset.x)/max(radius,1.);
-            float waterBoost=mix(1.0,1.38,step(.5,uMode));
-            float wake=(.26+uPressure*.55+clamp(uSpeed/1800.,0.,1.)*.35)*waterBoost;
-            outColor=previous+vec4((uImpulse+tangential*(2.5+uSpeed*.004)*wake)*mask,0.,0.);
+            // Tangential stirring from a stationary pointer looked like an endless whirl.
+            // Only inject momentum aligned with the actual contact motion.
+            float waterBoost=mix(1.0,1.25,step(.5,uMode));
+            float wake=(.25+uPressure*.38+clamp(uSpeed/1500.,0.,1.)*.34)*waterBoost;
+            outColor=previous+vec4(uImpulse*mask*wake,0.,0.);
           }else if(uMode>.5){
             float diluted=clamp(uDose*(.22+uPressure*.42)*(primary+fringe*.62+spray*.24),0.,.94);
             vec3 blur=(previous.rgb*2.0+
@@ -172,8 +173,9 @@ class GPUFluid {
           float C=texture(uCurl,vUv).x;
           vec2 N=vec2(T-B,R-L);N/=length(N)+.0001;
           vec2 confinement=vec2(N.x,-N.y)*C*uSwirl;
+          // Only a short, activity-scaled disturbance. No permanent background motor.
           vec2 breeze=vec2(sin(vUv.y*13.+uTime*.23)+cos(vUv.x*11.-uTime*.17),
-                                 cos(vUv.x*12.-uTime*.21)-sin(vUv.y*10.+uTime*.13))*(.45+uFlow*1.35);
+                                 cos(vUv.x*12.-uTime*.21)-sin(vUv.y*10.+uTime*.13))*uFlow*.65;
           vec2 vel=texture(uVelocity,vUv).xy+(confinement+breeze)*uDt;
           outColor=vec4(clamp(vel,vec2(-130.),vec2(130.)),0.,1.);
         }`,
@@ -329,16 +331,16 @@ class GPUFluid {
   stroke(a,b,col,radius,begin,pressure,speed,dt,tool='pigment'){
     this.hadInput=true;this.activity=1.0;this.idleTime=0;
     const sw=window.innerWidth,sh=window.innerHeight,dx=(b.x-a.x)*sw,dy=(b.y-a.y)*sh;
-    const narrow=1.15-.52*clamp(speed/1350,0,1);
-    const p=clamp(pressure,.05,1);
+    const narrow=1.26-.72*clamp(speed/1250,0,1);
+    const p=clamp(pressure,.04,1);
     const base=2.2+Number(radius)*.23;
     const isWater=(tool==='water'||col===WATER_TOKEN);
-    const r=clamp(base*narrow*(isWater?(.76+p*1.22):(.54+p*1.12)),1.6,52);
+    const r=clamp(base*narrow*(isWater?(.72+Math.pow(p,.68)*1.18):(.42+Math.pow(p,.68)*1.16)),1.4,52);
     this.lastStroke={radiusPx:r,pressure:p,speedPxSec:speed,tool:isWater?'water':'pigment'};
     const c=isWater?[0,0,0]:colorRGB(col).map(v=>-Math.log(.09+.91*(v/255)));
     const dist=Math.hypot(dx,dy);
-    const vdx=clamp((dx/Math.max(.012,dt))*(this.simW/sw)*.16,-72,72);
-    const vdy=clamp((dy/Math.max(.012,dt))*(this.simH/sh)*.16,-72,72);
+    const vdx=begin?0:clamp((dx/Math.max(.012,dt))*(this.simW/sw)*.115,-54,54);
+    const vdy=begin?0:clamp((dy/Math.max(.012,dt))*(this.simH/sh)*.115,-54,54);
     const common={uStart:[a.x,1-a.y],uEnd:[b.x,1-b.y],uScreen:[sw,sh],uSpeed:speed,uPressure:p,uPigment:c,uMode:isWater?1:0};
     this.pass('splat',this.velocity.write,{uTexture:this.velocity.read},{...common,uRadius0:r,uRadius1:r,
       uDose:(isWater?(begin?1.35:.95):(begin?.95:.62)),uImpulse:[vdx,vdy],uIsVelocity:1,uTexel:[1/this.simW,1/this.simH]});this.velocity.swap();
@@ -347,6 +349,17 @@ class GPUFluid {
     this.pass('splat',this.stain.write,{uTexture:this.stain.read},{...common,uRadius0:r*(isWater?1.8:1.55),uRadius1:r*(isWater?2.0:1.8),
       uDose:(isWater?(begin?.52:.34):(begin?1.05:.55)),uImpulse:[0,0],uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
     this.draw();
+  }
+  endStroke(pointer){
+    if(!pointer || pointer.speed<22)return;
+    const p=pointer,sw=window.innerWidth,sh=window.innerHeight;
+    const radius=clamp((this.lastStroke?.radiusPx||10)*1.7,6,60);
+    const momentum=[clamp((p.vx||0)*this.simW/sw*.085,-32,32),clamp(-(p.vy||0)*this.simH/sh*.085,-32,32)];
+    const common={uStart:[p.x,1-p.y],uEnd:[p.x,1-p.y],uScreen:[sw,sh],
+      uSpeed:p.speed,uPressure:p.pressure,uPigment:[0,0,0],uMode:0,uIsVelocity:1,
+      uRadius0:radius,uRadius1:radius,uDose:0,uImpulse:momentum,uTexel:[1/this.simW,1/this.simH]};
+    this.pass('splat',this.velocity.write,{uTexture:this.velocity.read},common);
+    this.velocity.swap();this.activity=Math.max(this.activity,.48);this.idleTime=0;
   }
   step(dt){
     if(!this.hadInput||dt<=0)return;
@@ -360,14 +373,15 @@ class GPUFluid {
     const tex=[1/this.simW,1/this.simH];
     const motion=Number(flow.value)/100;
     const activeFlow=motion*this.activity;
-    const velDecay=1.85+(1-this.activity)*5.25+Math.pow(Number(fade.value)/100,1.32)*1.65;
+    // Viscous decay lets a dragged surface coast briefly before settling.
+    const velDecay=1.20+(1-this.activity)*3.9;
     this.pass('advect',this.velocity.write,{uVelocity:this.velocity.read,uSource:this.velocity.read},
       {uVelRes:[this.simW,this.simH],uSrcRes:[this.simW,this.simH],uDt:t,uDecay:velDecay,uTexel:tex});this.velocity.swap();
     // Once the surface calms down, stop injecting ambient swirl.
     if(this.activity>.01){
       this.pass('curl',this.curl,{uVelocity:this.velocity.read},{uTexel:tex});
       this.pass('vorticity',this.velocity.write,{uVelocity:this.velocity.read,uCurl:this.curl},
-        {uTexel:tex,uDt:t,uSwirl:(5.+motion*24.)*(.06+.94*this.activity),uFlow:activeFlow,uTime:this.time});this.velocity.swap();
+        {uTexel:tex,uDt:t,uSwirl:(3.+motion*17.)*this.activity,uFlow:activeFlow,uTime:this.time});this.velocity.swap();
     }
     this.pass('divergence',this.divergence,{uVelocity:this.velocity.read},{uTexel:tex});
     for(let j=0;j<16;j++){
@@ -438,7 +452,7 @@ class InkSurface {
     const w=this.w,h=this.h;
     const cx=x*w,cy=y*h;
     const isWater=(tool==='water'||col===WATER_TOKEN);
-    const dynamic=(1.17-.54*Math.min(1,speed/1350))*(isWater?(.72+1.10*pressure):(.54+1.06*pressure));
+    const dynamic=(1.28-.73*Math.min(1,speed/1250))*(isWater?(.70+1.12*Math.pow(pressure,.68)):(.42+1.16*Math.pow(pressure,.68)));
     const r=clamp((2.9+radius*.17)*Math.min(w,h)/125*dynamic,1.2,Math.min(w,h)*.19);
     const pigment=isWater?[0,0,0]:pigmentRGB(col),R=Math.ceil(r*2.45),r2=r*r;
     const stainR=r*(isWater?1.95:1.75), stainBox=Math.ceil(stainR*2.1), stainR2=stainR*stainR;
@@ -457,17 +471,15 @@ class InkSurface {
             this.ink[j]=Math.max(0,this.ink[j]*(1-dilute));
             this.ink[j+1]=Math.max(0,this.ink[j+1]*(1-dilute));
             this.ink[j+2]=Math.max(0,this.ink[j+2]*(1-dilute));
-            const swirl=(begin?7.8:4.6)*(shape+fringe*.45)*(.8+speed/1500);
-            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.54-py/(r+1)*swirl,-58,58);
-            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.54+px/(r+1)*swirl,-58,58);
+            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.60,-58,58);
+            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.60,-58,58);
           }else{
             const dose=(shape*.92+fringe*.16)*(begin?1.95:.60)*(.70+pressure*.76);
             this.ink[j]=clamp(this.ink[j]+dose*pigment[0],0,8);
             this.ink[j+1]=clamp(this.ink[j+1]+dose*pigment[1],0,8);
             this.ink[j+2]=clamp(this.ink[j+2]+dose*pigment[2],0,8);
-            const swirl=(begin?5.2:2.4)*(shape+fringe*.35)*(.7+speed/1800);
-            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.36-py/(r+1)*swirl,-58,58);
-            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.36+px/(r+1)*swirl,-58,58);
+            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.37,-58,58);
+            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.37,-58,58);
           }
         }
         if(d2<=stainR2){
@@ -488,6 +500,23 @@ class InkSurface {
     }
     this.hadInput=true;this.activity=1.0;this.idleTime=0;
   }
+  endStroke(pointer){
+    if(!pointer || pointer.speed<22)return;
+    const x=pointer.x*this.w,y=pointer.y*this.h;
+    const radius=clamp((3+Number(size.value)*.17)*this.w/125*1.8,3,20);
+    const rx=clamp((pointer.vx||0)*this.w/window.innerWidth*.075,-28,28);
+    const ry=clamp((pointer.vy||0)*this.h/window.innerHeight*.075,-28,28);
+    const r2=radius*radius;
+    for(let iy=Math.max(0,Math.floor(y-radius*2));iy<Math.min(this.h,Math.ceil(y+radius*2));iy++){
+      for(let ix=Math.max(0,Math.floor(x-radius*2));ix<Math.min(this.w,Math.ceil(x+radius*2));ix++){
+        const d2=(ix-x)*(ix-x)+(iy-y)*(iy-y),k=iy*this.w+ix;
+        const influence=Math.exp(-d2/Math.max(r2,.01)*1.4);
+        this.vx[k]=clamp(this.vx[k]+rx*influence,-58,58);
+        this.vy[k]=clamp(this.vy[k]+ry*influence,-58,58);
+      }
+    }
+    this.activity=Math.max(this.activity,.48);this.idleTime=0;
+  }
   advance(dt){
     this.time+=dt;
     this.idleTime=Math.min(12,this.idleTime+dt);
@@ -501,7 +530,7 @@ class InkSurface {
     const evaporation=(.24+Math.pow(fadeNorm,1.72)*5.8)*dt;
     const persist=Math.exp(-evaporation);
     const stainPersist=Math.exp(-(.11+Math.pow(fadeNorm,1.62)*3.4)*dt);
-    const viscosity=Math.exp(-dt*(3.4+(1-this.activity)*8.0+fadeNorm*1.4));
+    const viscosity=Math.exp(-dt*(2.35+(1-this.activity)*5.4));
     const diffusion=clamp(dt*(.08+.26*activeFlow),0,.032);
     const stainDiffusion=clamp(dt*(.16+.40*activeFlow),0,.060);
     for(let y=0;y<h;y++){
@@ -638,30 +667,43 @@ const canvasTarget=e=>{
   const t=e.target;
   return t===canvas||t===document.body||t===document.documentElement||!!(t.closest&&t.closest('#grain, .frame, .intro, .vertical, .top'));
 };
-const showLive=(pressure,speed,rad)=>{
+const showLive=(pressure,speed,toolType)=>{
   const el=document.getElementById('brush-live');
-  el.textContent=`압력 ${Math.round(pressure*100)}% · ${Math.round(speed)}px/s`;
+  el.textContent=`${toolType==='pen'?'S펜':'손가락'} · ${toolType==='pen'?'필압 '+Math.round(pressure*100)+'% · ':''}${Math.round(speed)}px/s`;
 };
-function paint(id,clientX,clientY,begin,pressureValue=.5,time=performance.now()){
+function paint(id,clientX,clientY,begin,pressureValue=.5,time=performance.now(),pointerType='touch'){
   if(!engine)return;
   const rect=canvas.getBoundingClientRect();
   const x=clamp((clientX-rect.left)/Math.max(1,rect.width),0,1);
   const y=clamp((clientY-rect.top)/Math.max(1,rect.height),0,1);
-  let prev=pointers.get(id);if(!begin&&!prev)return;
-  const rawPressure=clamp(pressureValue>0?pressureValue:.5,.05,1);
+  const prev=pointers.get(id);if(!begin&&!prev)return;
+  const pen=pointerType==='pen';
+  // Chromium WebView exposes Galaxy S Pen force via PointerEvent.pressure (0...1).
+  // Fingers lack calibrated force; use a stable default instead of touch pressure noise.
+  const rawPressure=pen?clamp(pressureValue>0?pressureValue:.1,.04,1):.5;
   const prevTime=prev?prev.time:time-16;
-  const dt=clamp((time-prevTime)/1000,.008,.10);
-  const distance=prev?Math.hypot((x-prev.x)*rect.width,(y-prev.y)*rect.height):0;
-  const rawSpeed=clamp(distance/dt,0,3600);
-  const speed=prev?prev.speed*.42+rawSpeed*.58:0;
-  const pressure=prev?prev.pressure*.25+rawPressure*.75:rawPressure;
-  const a=prev?{x:prev.x,y:prev.y}:{x,y};const b={x,y};
+  const dt=clamp((time-prevTime)/1000,.006,.10);
+  const dx=prev?(x-prev.x)*rect.width:0,dy=prev?(y-prev.y)*rect.height:0;
+  const dist=Math.hypot(dx,dy);
+  const instantaneous=clamp(dist/dt,0,2400);
+  const response=1-Math.exp(-dt/(pen?.028:.045));
+  const speed=prev?prev.speed+(instantaneous-prev.speed)*response:0;
+  const vx=prev?prev.vx+((dx/dt)-prev.vx)*response:0;
+  const vy=prev?prev.vy+((dy/dt)-prev.vy)*response:0;
+  const pressure=prev?prev.pressure+(rawPressure-prev.pressure)*Math.min(1,response*1.8):rawPressure;
+  const a=prev?{x:prev.x,y:prev.y}:{x,y},b={x,y};
   const brush=Number(size.value);
+  // A long coalesced stroke is split spatially; cap samples to avoid saturation.
   safe(()=>{
-    if(activeMode==='WebGL2')engine.stroke(a,b,color,brush,begin,pressure,speed,dt,currentTool);
-    else {
-      const len=Math.hypot(x-a.x,y-a.y);
-      const n=begin?1:Math.max(1,Math.min(55,Math.ceil(len/.008)));
+    if(activeMode==='WebGL2'){
+      const n=begin?1:Math.max(1,Math.min(12,Math.ceil(dist/15)));
+      for(let i=1;i<=n;i++){
+        const t0=(i-1)/n,t1=i/n;
+        engine.stroke({x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0},
+          {x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1},color,brush,begin&&i===1,pressure,speed,dt/n,currentTool);
+      }
+    }else{
+      const n=begin?1:Math.max(1,Math.min(40,Math.ceil(dist/7)));
       for(let i=1;i<=n;i++){
         const f=i/n,sx=a.x+(x-a.x)*f,sy=a.y+(y-a.y)*f;
         engine.drop(sx,sy,(x-a.x)/n,(y-a.y)/n,color,brush,begin&&i===1,pressure,speed,currentTool);
@@ -669,36 +711,46 @@ function paint(id,clientX,clientY,begin,pressureValue=.5,time=performance.now())
       engine.draw();
     }
   });
-  pointers.set(id,{x,y,time,speed,pressure});
-  showLive(pressure,speed);
+  pointers.set(id,{x,y,time,speed,vx,vy,pressure,pointerType});
+  showLive(pressure,speed,pointerType);
   if(first){first=false;intro.classList.add('hide')}
+}
+function finishPointer(id,cancelled=false){
+  const prev=pointers.get(id);
+  if(!prev)return;
+  if(!cancelled)safe(()=>engine.endStroke?.(prev));
+  pointers.delete(id);
 }
 if('PointerEvent' in window){
   document.addEventListener('pointerdown',e=>{
-    if(!canvasTarget(e))return;e.preventDefault();paint(e.pointerId,e.clientX,e.clientY,true,e.pressure,e.timeStamp);
+    if(!canvasTarget(e))return;
+    // S Pen hover must never leave ink: only contacted pointers start strokes.
+    if(e.pointerType==='pen'&&e.buttons===0&&e.pressure===0)return;
+    e.preventDefault();paint(e.pointerId,e.clientX,e.clientY,true,e.pressure,e.timeStamp,e.pointerType);
   },{passive:false});
   document.addEventListener('pointermove',e=>{
     if(!pointers.has(e.pointerId))return;e.preventDefault();
-    // Coalesced input points preserve stylus pressure and motion direction.
-    const samples=e.getCoalescedEvents?e.getCoalescedEvents():[];
-    if(samples.length){for(const sample of samples.slice(-8))paint(e.pointerId,sample.clientX,sample.clientY,false,sample.pressure,sample.timeStamp);}
-    else paint(e.pointerId,e.clientX,e.clientY,false,e.pressure,e.timeStamp);
+    const coalesced=e.getCoalescedEvents?.()||[];
+    if(coalesced.length){
+      for(const sample of coalesced.slice(-12))
+        paint(e.pointerId,sample.clientX,sample.clientY,false,sample.pressure,sample.timeStamp,e.pointerType);
+    }else paint(e.pointerId,e.clientX,e.clientY,false,e.pressure,e.timeStamp,e.pointerType);
   },{passive:false});
-  ['pointerup','pointercancel'].forEach(name=>document.addEventListener(name,e=>pointers.delete(e.pointerId)));
+  document.addEventListener('pointerup',e=>finishPointer(e.pointerId));
+  document.addEventListener('pointercancel',e=>finishPointer(e.pointerId,true));
 }else{
   document.addEventListener('touchstart',e=>{if(!canvasTarget(e.target))return;e.preventDefault();
-    for(const t of e.changedTouches)paint(t.identifier,t.clientX,t.clientY,true,t.force||.5,e.timeStamp);
+    for(const t of e.changedTouches)paint(t.identifier,t.clientX,t.clientY,true,.5,e.timeStamp,'touch');
   },{passive:false});
   document.addEventListener('touchmove',e=>{if(!pointers.size)return;e.preventDefault();
-    for(const t of e.changedTouches)paint(t.identifier,t.clientX,t.clientY,false,t.force||.5,e.timeStamp);
+    for(const t of e.changedTouches)paint(t.identifier,t.clientX,t.clientY,false,.5,e.timeStamp,'touch');
   },{passive:false});
-  ['touchend','touchcancel'].forEach(name=>document.addEventListener(name,e=>{
-    for(const t of e.changedTouches)pointers.delete(t.identifier);
-  }));
+  document.addEventListener('touchend',e=>{for(const t of e.changedTouches)finishPointer(t.identifier)});
+  document.addEventListener('touchcancel',e=>{for(const t of e.changedTouches)finishPointer(t.identifier,true)});
   let held=false;
-  document.addEventListener('mousedown',e=>{if(!canvasTarget(e))return;held=true;paint('mouse',e.clientX,e.clientY,true,.5,e.timeStamp)});
-  document.addEventListener('mousemove',e=>{if(held)paint('mouse',e.clientX,e.clientY,false,.5,e.timeStamp)});
-  document.addEventListener('mouseup',()=>{held=false;pointers.delete('mouse')});
+  document.addEventListener('mousedown',e=>{if(!canvasTarget(e))return;held=true;paint('mouse',e.clientX,e.clientY,true,.5,e.timeStamp,'mouse')});
+  document.addEventListener('mousemove',e=>{if(held)paint('mouse',e.clientX,e.clientY,false,.5,e.timeStamp,'mouse')});
+  document.addEventListener('mouseup',()=>{held=false;finishPointer('mouse')});
 }
 function loop(now){
   const dt=lastTime?clamp((now-lastTime)/1000,0,.06):.016;lastTime=now;
@@ -741,8 +793,8 @@ document.getElementById('save').addEventListener('click',async()=>{
   }catch(e){console.error(e);toast('이미지 저장 실패: 화면 캡처를 이용해 주세요');}
 });
 document.addEventListener('visibilitychange',()=>{lastTime=0});
-window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.2.6',tool:currentTool,size:[canvas.width,canvas.height],
-  sim:engine&&engine.simW?[engine.simW,engine.simH]:null,brush:[...pointers.values()],hadInput:!!engine?.hadInput,stroke:engine?.lastStroke||null});
+window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.3.0',tool:currentTool,size:[canvas.width,canvas.height],
+  sim:engine&&engine.simW?[engine.simW,engine.simH]:null,brush:[...pointers.values()],hadInput:!!engine?.hadInput,stroke:engine?.lastStroke||null,activity:engine?.activity??0});
 })();
 
 </script>
