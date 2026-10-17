@@ -2,12 +2,23 @@
 
 **Interactive Japanese-inspired ink painting · WebGL2 fluid simulation · Android APK**
 
-![SUMI v0.3.0 실제 브라우저 화면](docs/preview.png)
+![SUMI v0.3.1 실제 브라우저 화면](docs/preview.png)
 
 
 `SUMI Fluid Art`는 일본 전통 먹물 흘리기 기법 **스미나가시(墨流し, Suminagashi)** 에서 영감을 받은 인터랙티브 아트 앱입니다. 손가락/마우스로 수면 위에 먹과 색을 흘리고, **물(투명)** 도구로 색을 다시 퍼뜨리거나 희석할 수 있습니다.
 
 English: An offline-first interactive ink painting experience inspired by Suminagashi. Paint with ink, watch fluid motion settle, mix colors, and use transparent water to soften or dilute existing pigment.
+
+## v0.3.1 — Continuous Fluid Ink
+
+- **정지 상태의 먹 공급**: 손가락이나 S펜을 누르고 있는 동안 프레임 루프에서 약 28Hz로 먹물이 연속 공급됩니다. `pointermove`가 없어도 번집니다.
+- **속도와 머무는 시간**: 이동이 느릴수록 선이 굵어지고, 접촉이 지속되면 축적 시간(wetAge)에 따라 더 두꺼워집니다. 빠르게 그리면 가늘어집니다.
+- **S펜 필압**: `PointerEvent.pressure`를 유지하며 손가락은 속도 중심으로 처리합니다.
+- **유체 엔진**: WebGL2 이류, 압력 프로젝션, 와도와 더불어 염료 확산 및 접촉 시 방사형 유동을 더했습니다. Canvas2D 안전 모드에도 반영했습니다.
+- **자연스러운 정지**: 펜업 시 중복 운동량을 더하지 않고 기존 유속만 점성으로 서서히 감쇠합니다. 자동 배경 바람도 제거했습니다.
+- **소멸 속도**: 과도했던 기본값 소멸을 완화하고, 100%에서는 빠른 소멸이 유지됩니다. 물(투명) 도구 유지.
+
+> Galaxy Ultra S펜 실기기 및 Android GPU 동작은 기기에서 추가 검증해야 합니다. 2D 수면의 근사 시뮬레이션이며 실제 3D 수면 물리의 완전 재현은 아닙니다.
 
 ## v0.3.0 — S Pen & Momentum Patch
 

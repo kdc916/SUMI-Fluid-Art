@@ -23,8 +23,8 @@ android {
         applicationId 'com.maxvfx.suminagashi'
         minSdk 29
         targetSdk 29
-        versionCode 7
-        versionName '0.3.0'
+        versionCode 8
+        versionName '0.3.1'
     }
 
     // Avoid keeping a second, potentially stale HTML copy in the repository.

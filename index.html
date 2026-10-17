@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.3.0</title>
+<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.3.1</title>
 <style>
 :root{--paper:#eae5d9;--ink:#2c2925;--muted:#867c70;--line:rgba(65,49,33,.23);--panel:rgba(246,242,233,.92);--accent:#ab5748}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{padding:0;margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -67,7 +67,7 @@ const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
 const colorRGB=h=>[1,3,5].map(i=>parseInt(h.substring(i,i+2),16));
 const pigmentRGB=h=>colorRGB(h).map(v=>-Math.log(.075+.925*(v/255)));
 function toast(s){const el=document.getElementById('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),1600)}
-// SUMI v0.3.0 — clean engine assembly
+// SUMI v0.3.1 — flowing ink, continuous wet contact, pressure & velocity-sensitive deposition
 // SUMI v0.2.1 — WebGL2, GLSL ES 3.00, semi-Lagrangian incompressible 2D fluid.
 // Tuned for more natural sumi-ink pooling, soft capillary edges, and lingering stains.
 class GPUFluid {
@@ -122,7 +122,7 @@ class GPUFluid {
       splat:`uniform sampler2D uTexture;uniform vec2 uStart;uniform vec2 uEnd;
         uniform vec2 uScreen;uniform vec2 uImpulse;uniform float uRadius0;
         uniform float uRadius1;uniform float uDose;uniform float uSpeed;
-        uniform float uPressure;uniform float uIsVelocity;uniform float uMode;uniform vec3 uPigment;
+        uniform float uPressure;uniform float uIsVelocity;uniform float uMode;uniform float uRadial;uniform vec3 uPigment;
         void main(){
           vec2 p=(vUv-uStart)*uScreen, segment=(uEnd-uStart)*uScreen;
           float tt=clamp(dot(p,segment)/max(dot(segment,segment),.0001),0.,1.);
@@ -141,7 +141,12 @@ class GPUFluid {
             // Only inject momentum aligned with the actual contact motion.
             float waterBoost=mix(1.0,1.25,step(.5,uMode));
             float wake=(.25+uPressure*.38+clamp(uSpeed/1500.,0.,1.)*.34)*waterBoost;
-            outColor=previous+vec4(uImpulse*mask*wake,0.,0.);
+            // A droplet displaces the local surface radially; moving strokes also drag it.
+            // Force is finite, time-scaled, and disappears as soon as contact stops.
+            float rr=length(offset)/max(radius,1.);
+            float annulus=exp(-2.8*(rr-.72)*(rr-.72))*smoothstep(.03,.22,rr);
+            vec2 radial=normalize(offset+vec2(0.0001))*uRadial*annulus;
+            outColor=previous+vec4(uImpulse*mask*wake+radial,0.,0.);
           }else if(uMode>.5){
             float diluted=clamp(uDose*(.22+uPressure*.42)*(primary+fringe*.62+spray*.24),0.,.94);
             vec3 blur=(previous.rgb*2.0+
@@ -155,6 +160,15 @@ class GPUFluid {
             float deposited=uDose*(.48+uPressure*.98)*(primary+fringe*.72+spray*.45);
             outColor=vec4(min(previous.rgb+uPigment*deposited,vec3(12.)),1.);
           }
+        }`,
+      diffuse:`uniform sampler2D uTexture;uniform float uBlend;
+        void main(){
+          vec3 c=texture(uTexture,vUv).rgb;
+          vec3 n=(texture(uTexture,vUv+vec2(uTexel.x,0.)).rgb+
+                  texture(uTexture,vUv-vec2(uTexel.x,0.)).rgb+
+                  texture(uTexture,vUv+vec2(0.,uTexel.y)).rgb+
+                  texture(uTexture,vUv-vec2(0.,uTexel.y)).rgb)*.25;
+          outColor=vec4(max(mix(c,n,uBlend),vec3(0.)),1.);
         }`,
       curl:`uniform sampler2D uVelocity;
         void main(){vec2 L=texture(uVelocity,vUv-vec2(uTexel.x,0.)).xy;
@@ -174,9 +188,8 @@ class GPUFluid {
           vec2 N=vec2(T-B,R-L);N/=length(N)+.0001;
           vec2 confinement=vec2(N.x,-N.y)*C*uSwirl;
           // Only a short, activity-scaled disturbance. No permanent background motor.
-          vec2 breeze=vec2(sin(vUv.y*13.+uTime*.23)+cos(vUv.x*11.-uTime*.17),
-                                 cos(vUv.x*12.-uTime*.21)-sin(vUv.y*10.+uTime*.13))*uFlow*.65;
-          vec2 vel=texture(uVelocity,vUv).xy+(confinement+breeze)*uDt;
+          // The surface is passive: no animated background force once input ends.
+          vec2 vel=texture(uVelocity,vUv).xy+confinement*uDt;
           outColor=vec4(clamp(vel,vec2(-130.),vec2(130.)),0.,1.);
         }`,
       divergence:`uniform sampler2D uVelocity;
@@ -328,45 +341,45 @@ class GPUFluid {
     this.curl=this.target(this.simW,this.simH);this.divergence=this.target(this.simW,this.simH);this.pressure=this.double(this.simW,this.simH);
     this.hadInput=false;this.activity=0;this.idleTime=0;this.draw();
   }
-  stroke(a,b,col,radius,begin,pressure,speed,dt,tool='pigment'){
-    this.hadInput=true;this.activity=1.0;this.idleTime=0;
+  stroke(a,b,col,radius,begin,pressure,speed,dt,tool='pigment',wetAge=0,holding=false){
+    this.hadInput=true;this.activity=Math.max(this.activity,.85);this.idleTime=0;
     const sw=window.innerWidth,sh=window.innerHeight,dx=(b.x-a.x)*sw,dy=(b.y-a.y)*sh;
-    const narrow=1.26-.72*clamp(speed/1250,0,1);
-    const p=clamp(pressure,.04,1);
-    const base=2.2+Number(radius)*.23;
+    const p=clamp(pressure,.04,1),wet=clamp(wetAge,0,3.5);
     const isWater=(tool==='water'||col===WATER_TOKEN);
-    const r=clamp(base*narrow*(isWater?(.72+Math.pow(p,.68)*1.18):(.42+Math.pow(p,.68)*1.16)),1.4,52);
-    this.lastStroke={radiusPx:r,pressure:p,speedPxSec:speed,tool:isWater?'water':'pigment'};
+    // Slow strokes broaden gradually; fast strokes narrow even under identical force.
+    const slow=1.0/(1.0+Math.pow(speed/260,1.15));
+    const dwellGrowth=1.0+Math.min(1.28,wet*.66);
+    const pressureScale=isWater?(.74+Math.pow(p,.67)*.65):(.62+Math.pow(p,.68)*.70);
+    const r=clamp((2.8+Number(radius)*.23)*(.37+1.17*slow)*dwellGrowth*pressureScale,1.7,64);
+    this.lastStroke={radiusPx:r,pressure:p,speedPxSec:speed,wetAge:wet,holding,tool:isWater?'water':'pigment'};
     const c=isWater?[0,0,0]:colorRGB(col).map(v=>-Math.log(.09+.91*(v/255)));
     const dist=Math.hypot(dx,dy);
-    const vdx=begin?0:clamp((dx/Math.max(.012,dt))*(this.simW/sw)*.115,-54,54);
-    const vdy=begin?0:clamp((dy/Math.max(.012,dt))*(this.simH/sh)*.115,-54,54);
+    const vdx=begin||holding?0:clamp(dx/Math.max(.008,dt)*(this.simW/sw)*.16,-56,56);
+    const vdy=begin||holding?0:clamp(dy/Math.max(.008,dt)*(this.simH/sh)*.16,-56,56);
     const common={uStart:[a.x,1-a.y],uEnd:[b.x,1-b.y],uScreen:[sw,sh],uSpeed:speed,uPressure:p,uPigment:c,uMode:isWater?1:0};
+    // Each additional stationary frame feeds ink into the pool, not another hard marker dab.
+    const amount=holding?clamp(dt,.015,.06)*3.8:(begin?.55:(.18+Math.min(1.4,dist/Math.max(r,1))*.16));
+    const radial=holding?(2.8+Number(flow.value)*.028)*clamp(dt,.012,.06)*18:begin?1.6:Math.min(1.2,dist/Math.max(5,r))*.32;
     this.pass('splat',this.velocity.write,{uTexture:this.velocity.read},{...common,uRadius0:r,uRadius1:r,
-      uDose:(isWater?(begin?1.35:.95):(begin?.95:.62)),uImpulse:[vdx,vdy],uIsVelocity:1,uTexel:[1/this.simW,1/this.simH]});this.velocity.swap();
-    this.pass('splat',this.dye.write,{uTexture:this.dye.read},{...common,uRadius0:r*(isWater?1.18:.92),uRadius1:r*(isWater?1.10:1.0),
-      uDose:(isWater?(begin?1.08:.74):(begin?2.55:(.85+Math.min(2.4,dist/Math.max(r,1))*.48))),uImpulse:[0,0],uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
-    this.pass('splat',this.stain.write,{uTexture:this.stain.read},{...common,uRadius0:r*(isWater?1.8:1.55),uRadius1:r*(isWater?2.0:1.8),
-      uDose:(isWater?(begin?.52:.34):(begin?1.05:.55)),uImpulse:[0,0],uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+      uDose:0,uImpulse:[vdx,vdy],uRadial:radial,uIsVelocity:1,uTexel:[1/this.simW,1/this.simH]});this.velocity.swap();
+    this.pass('splat',this.dye.write,{uTexture:this.dye.read},{...common,uRadius0:r*(isWater?1.18:.90),uRadius1:r,
+      uDose:amount*(isWater?1.12:1.0),uImpulse:[0,0],uRadial:0,uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+    if(!holding||wet>.45){
+      this.pass('splat',this.stain.write,{uTexture:this.stain.read},{...common,uRadius0:r*(isWater?1.8:1.35),uRadius1:r*(isWater?1.9:1.4),
+        uDose:amount*(isWater?.25:.10),uImpulse:[0,0],uRadial:0,uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+    }
     this.draw();
   }
   endStroke(pointer){
-    if(!pointer || pointer.speed<22)return;
-    const p=pointer,sw=window.innerWidth,sh=window.innerHeight;
-    const radius=clamp((this.lastStroke?.radiusPx||10)*1.7,6,60);
-    const momentum=[clamp((p.vx||0)*this.simW/sw*.085,-32,32),clamp(-(p.vy||0)*this.simH/sh*.085,-32,32)];
-    const common={uStart:[p.x,1-p.y],uEnd:[p.x,1-p.y],uScreen:[sw,sh],
-      uSpeed:p.speed,uPressure:p.pressure,uPigment:[0,0,0],uMode:0,uIsVelocity:1,
-      uRadius0:radius,uRadius1:radius,uDose:0,uImpulse:momentum,uTexel:[1/this.simW,1/this.simH]};
-    this.pass('splat',this.velocity.write,{uTexture:this.velocity.read},common);
-    this.velocity.swap();this.activity=Math.max(this.activity,.48);this.idleTime=0;
+    // Motion was already transferred during drawing. Releasing does NOT add a second impulse.
+    this.idleTime=0;
   }
   step(dt){
     if(!this.hadInput||dt<=0)return;
     this.accum=Math.min(.1,this.accum+dt);
     this.idleTime=Math.min(12,this.idleTime+dt);
     // Input energy should settle instead of wriggling forever.
-    const settleRate=.80+Math.pow(Number(fade.value)/100,1.20)*2.10;
+    const settleRate=.66;
     this.activity=Math.max(0,this.activity-dt*settleRate);
     if(this.accum<1/34)return;
     const t=Math.min(.045,this.accum);this.accum=0;this.time+=t;
@@ -374,25 +387,28 @@ class GPUFluid {
     const motion=Number(flow.value)/100;
     const activeFlow=motion*this.activity;
     // Viscous decay lets a dragged surface coast briefly before settling.
-    const velDecay=1.20+(1-this.activity)*3.9;
+    const velDecay=.65+(1-this.activity)*1.45;
     this.pass('advect',this.velocity.write,{uVelocity:this.velocity.read,uSource:this.velocity.read},
       {uVelRes:[this.simW,this.simH],uSrcRes:[this.simW,this.simH],uDt:t,uDecay:velDecay,uTexel:tex});this.velocity.swap();
     // Once the surface calms down, stop injecting ambient swirl.
     if(this.activity>.01){
       this.pass('curl',this.curl,{uVelocity:this.velocity.read},{uTexel:tex});
       this.pass('vorticity',this.velocity.write,{uVelocity:this.velocity.read,uCurl:this.curl},
-        {uTexel:tex,uDt:t,uSwirl:(3.+motion*17.)*this.activity,uFlow:activeFlow,uTime:this.time});this.velocity.swap();
+        {uTexel:tex,uDt:t,uSwirl:(3.5+motion*10.)*this.activity,uFlow:0,uTime:this.time});this.velocity.swap();
     }
     this.pass('divergence',this.divergence,{uVelocity:this.velocity.read},{uTexel:tex});
     for(let j=0;j<16;j++){
       this.pass('pressure',this.pressure.write,{uPressure:this.pressure.read,uDivergence:this.divergence},{uTexel:tex});this.pressure.swap();
     }
     this.pass('gradient',this.velocity.write,{uVelocity:this.velocity.read,uPressure:this.pressure.read},{uTexel:tex});this.velocity.swap();
-    const fadeAmt=Math.pow(Number(fade.value)/100,1.65);
+    const fadeAmt=Math.pow(Number(fade.value)/100,3.0);
     this.pass('advect',this.dye.write,{uVelocity:this.velocity.read,uSource:this.dye.read},
-      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t,uDecay:.40+fadeAmt*8.0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t,uDecay:.052+fadeAmt*2.45,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+    // Isotropic pigment diffusion remains active even once the fluid velocity settles.
+    this.pass('diffuse',this.dye.write,{uTexture:this.dye.read},
+      {uTexel:[1/this.dyeW,1/this.dyeH],uBlend:clamp(t*(3.0+6.0*motion),0,.32)});this.dye.swap();
     this.pass('advect',this.stain.write,{uVelocity:this.velocity.read,uSource:this.stain.read},
-      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t*.24,uDecay:.14+fadeAmt*6.0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t*.18,uDecay:.025+fadeAmt*1.65,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
     this.draw();
   }
   draw(){this.pass('display',null,{uDye:this.dye.read,uStain:this.stain.read},{uDyeRes:[this.dyeW,this.dyeH],uTexel:[1/this.dyeW,1/this.dyeH],uDark:night?1:0,uTime:this.time});}
@@ -448,97 +464,73 @@ class InkSurface {
     this.draw();
   }
   clear(){this.ink.fill(0);this.inkNext.fill(0);this.stain.fill(0);this.stainNext.fill(0);this.vx.fill(0);this.vy.fill(0);this.vxNext.fill(0);this.vyNext.fill(0);this.activity=0;this.idleTime=0;this.hadInput=false;this.draw()}
-  drop(x,y,dx,dy,col,radius,begin,pressure=.5,speed=0,tool='pigment'){
-    const w=this.w,h=this.h;
-    const cx=x*w,cy=y*h;
-    const isWater=(tool==='water'||col===WATER_TOKEN);
-    const dynamic=(1.28-.73*Math.min(1,speed/1250))*(isWater?(.70+1.12*Math.pow(pressure,.68)):(.42+1.16*Math.pow(pressure,.68)));
-    const r=clamp((2.9+radius*.17)*Math.min(w,h)/125*dynamic,1.2,Math.min(w,h)*.19);
-    const pigment=isWater?[0,0,0]:pigmentRGB(col),R=Math.ceil(r*2.45),r2=r*r;
-    const stainR=r*(isWater?1.95:1.75), stainBox=Math.ceil(stainR*2.1), stainR2=stainR*stainR;
-    const impulseX=clamp(dx*w*22,-46,46),impulseY=clamp(dy*h*22,-46,46);
-    for(let iy=Math.max(0,Math.floor(cy-stainBox));iy<=Math.min(h-1,Math.ceil(cy+stainBox));iy++){
-      for(let ix=Math.max(0,Math.floor(cx-stainBox));ix<=Math.min(w-1,Math.ceil(cx+stainBox));ix++){
-        const px=ix+.5-cx,py=iy+.5-cy,d2=px*px+py*py;
-        const idx=iy*w+ix,j=idx*3;
-        const ang=Math.atan2(py,px);
-        const edge=.90+.08*Math.sin(ang*7+this.time*.8)+.04*Math.cos(ang*13-this.time*.7);
-        if(d2<=R*R){
-          const t=d2/(r2*edge*edge),shape=Math.exp(-t*1.35);
-          const fringe=Math.exp(-7*Math.pow(Math.max(0,Math.sqrt(d2)/Math.max(r,1)-.92),2));
-          if(isWater){
-            const dilute=clamp((shape*.86+fringe*.20)*(begin?.46:.24)*(.72+pressure*.62),0,.92);
-            this.ink[j]=Math.max(0,this.ink[j]*(1-dilute));
-            this.ink[j+1]=Math.max(0,this.ink[j+1]*(1-dilute));
-            this.ink[j+2]=Math.max(0,this.ink[j+2]*(1-dilute));
-            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.60,-58,58);
-            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.60,-58,58);
+  drop(x,y,dx,dy,col,radius,begin,pressure=.5,speed=0,tool='pigment',wetAge=0,holding=false,dt=.033){
+    const w=this.w,h=this.h,cx=x*w,cy=y*h,water=tool==='water'||col===WATER_TOKEN;
+    const slow=1/(1+Math.pow(speed/260,1.15));
+    const growth=1+Math.min(1.28,wetAge*.66);
+    const pressureScale=water?(.74+Math.pow(pressure,.67)*.65):(.62+Math.pow(pressure,.68)*.70);
+    const screenR=(2.8+Number(radius)*.23)*(.37+1.17*slow)*growth*pressureScale;
+    this.lastStroke={radiusPx:screenR,pressure,speedPxSec:speed,wetAge,holding,tool:water?'water':'pigment'};
+    const r=clamp(screenR*Math.min(w,h)/Math.min(window.innerWidth,window.innerHeight),1.0,Math.min(w,h)*.24);
+    const stainR=r*(water?2.0:1.4),R=Math.ceil(stainR*2.1),pigment=water?[0,0,0]:pigmentRGB(col);
+    const dxSim=clamp(dx*w*24,-48,48),dySim=clamp(dy*h*24,-48,48);
+    const dose=holding?clamp(dt,.015,.06)*.76:begin?.44:.23;
+    const radialStrength=holding?(1.25+Number(flow.value)*.017):begin?.75:.24;
+    for(let iy=Math.max(0,Math.floor(cy-R));iy<=Math.min(h-1,Math.ceil(cy+R));iy++){
+      for(let ix=Math.max(0,Math.floor(cx-R));ix<=Math.min(w-1,Math.ceil(cx+R));ix++){
+        const px=ix+.5-cx,py=iy+.5-cy,d=Math.hypot(px,py),id=iy*w+ix,k=id*3;
+        const ang=Math.atan2(py,px),edge=.95+.035*Math.sin(7*ang+this.time*.6);
+        const rr=d/Math.max(r*edge,.01),core=Math.exp(-1.75*rr*rr);
+        if(d<=r*2.1){
+          const ring=Math.exp(-2.6*(rr-.76)*(rr-.76))*(1-Math.exp(-rr*rr*18));
+          const vxpush=(px/(d+.3))*radialStrength*ring;
+          const vypush=(py/(d+.3))*radialStrength*ring;
+          this.vx[id]=clamp(this.vx[id]+vxpush+(holding?0:dxSim*.30*core),-58,58);
+          this.vy[id]=clamp(this.vy[id]+vypush+(holding?0:dySim*.30*core),-58,58);
+          if(water){
+            const dilute=clamp(dose*(.20+pressure*.32)*core*1.9,0,.6);
+            for(let c=0;c<3;c++)this.ink[k+c]*=1-dilute;
           }else{
-            const dose=(shape*.92+fringe*.16)*(begin?1.95:.60)*(.70+pressure*.76);
-            this.ink[j]=clamp(this.ink[j]+dose*pigment[0],0,8);
-            this.ink[j+1]=clamp(this.ink[j+1]+dose*pigment[1],0,8);
-            this.ink[j+2]=clamp(this.ink[j+2]+dose*pigment[2],0,8);
-            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.37,-58,58);
-            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.37,-58,58);
+            for(let c=0;c<3;c++)this.ink[k+c]=Math.min(9,this.ink[k+c]+dose*(.65+pressure*.4)*core*pigment[c]);
           }
         }
-        if(d2<=stainR2){
-          const t2=d2/(stainR2*edge*edge);
-          if(isWater){
-            const soak=clamp(Math.exp(-t2*.95)*(begin?.24:.14)*(.62+pressure*.42),0,.65);
-            this.stain[j]=Math.max(0,this.stain[j]*(1-soak));
-            this.stain[j+1]=Math.max(0,this.stain[j+1]*(1-soak));
-            this.stain[j+2]=Math.max(0,this.stain[j+2]*(1-soak));
-          }else{
-            const soak=Math.exp(-t2*.95)*(begin?.88:.40)*(.62+pressure*.45);
-            this.stain[j]=clamp(this.stain[j]+soak*pigment[0],0,6);
-            this.stain[j+1]=clamp(this.stain[j+1]+soak*pigment[1],0,6);
-            this.stain[j+2]=clamp(this.stain[j+2]+soak*pigment[2],0,6);
+        if(d<stainR*2){
+          const mask=Math.exp(-.95*Math.pow(d/Math.max(stainR,.01),2));
+          const stainDose=dose*(water?.25:.10)*mask;
+          for(let c=0;c<3;c++){
+            if(water)this.stain[k+c]*=1-clamp(stainDose,0,.30);
+            else this.stain[k+c]=Math.min(5,this.stain[k+c]+stainDose*pigment[c]);
           }
         }
       }
     }
-    this.hadInput=true;this.activity=1.0;this.idleTime=0;
+    this.hadInput=true;this.activity=Math.max(this.activity,.85);this.idleTime=0;
   }
   endStroke(pointer){
-    if(!pointer || pointer.speed<22)return;
-    const x=pointer.x*this.w,y=pointer.y*this.h;
-    const radius=clamp((3+Number(size.value)*.17)*this.w/125*1.8,3,20);
-    const rx=clamp((pointer.vx||0)*this.w/window.innerWidth*.075,-28,28);
-    const ry=clamp((pointer.vy||0)*this.h/window.innerHeight*.075,-28,28);
-    const r2=radius*radius;
-    for(let iy=Math.max(0,Math.floor(y-radius*2));iy<Math.min(this.h,Math.ceil(y+radius*2));iy++){
-      for(let ix=Math.max(0,Math.floor(x-radius*2));ix<Math.min(this.w,Math.ceil(x+radius*2));ix++){
-        const d2=(ix-x)*(ix-x)+(iy-y)*(iy-y),k=iy*this.w+ix;
-        const influence=Math.exp(-d2/Math.max(r2,.01)*1.4);
-        this.vx[k]=clamp(this.vx[k]+rx*influence,-58,58);
-        this.vy[k]=clamp(this.vy[k]+ry*influence,-58,58);
-      }
-    }
-    this.activity=Math.max(this.activity,.48);this.idleTime=0;
+    // No artificial release fling; input momentum is already stored in velocity.
+    this.idleTime=0;
   }
   advance(dt){
     this.time+=dt;
     this.idleTime=Math.min(12,this.idleTime+dt);
     const fadeNorm=Number(fade.value)/100;
-    const settleRate=.74+Math.pow(fadeNorm,1.20)*1.95;
+    const settleRate=.64;
     this.activity=Math.max(0,this.activity-dt*settleRate);
     const w=this.w,h=this.h,src=this.ink,dst=this.inkNext,stainSrc=this.stain,stainDst=this.stainNext;
     const vx=this.vx,vy=this.vy,nvx=this.vxNext,nvy=this.vyNext;
     const motion=Number(flow.value)/100;
     const activeFlow=motion*this.activity;
-    const evaporation=(.24+Math.pow(fadeNorm,1.72)*5.8)*dt;
+    const evaporation=(.052+Math.pow(fadeNorm,3.0)*2.45)*dt;
     const persist=Math.exp(-evaporation);
-    const stainPersist=Math.exp(-(.11+Math.pow(fadeNorm,1.62)*3.4)*dt);
-    const viscosity=Math.exp(-dt*(2.35+(1-this.activity)*5.4));
-    const diffusion=clamp(dt*(.08+.26*activeFlow),0,.032);
-    const stainDiffusion=clamp(dt*(.16+.40*activeFlow),0,.060);
+    const stainPersist=Math.exp(-(.025+Math.pow(fadeNorm,3.0)*1.65)*dt);
+    const viscosity=Math.exp(-dt*(.95+(1-this.activity)*1.75));
+    const diffusion=clamp(dt*(3.4+7.0*motion),0,.33);
+    const stainDiffusion=clamp(dt*(.40+.80*motion),0,.055);
     for(let y=0;y<h;y++){
       const yw=y*w;
       for(let x=0;x<w;x++){
         const i=yw+x,k=i*3;
-        const fx=activeFlow*(2.2*Math.sin(y*.047+this.time*.52)+1.0*Math.cos((y+x)*.026-this.time*.3));
-        const fy=activeFlow*(2.0*Math.cos(x*.049-this.time*.47)-1.0*Math.sin((x-y)*.031+this.time*.4));
+        const fx=0,fy=0; // Motion comes from contact, not a perpetual ambient wind.
         const px=clamp(x-(vx[i]+fx)*dt,0,w-1.001);
         const py=clamp(y-(vy[i]+fy)*dt,0,h-1.001);
         const spx=clamp(x-(vx[i]*.30+fx*.55)*dt,0,w-1.001);
@@ -692,6 +684,7 @@ function paint(id,clientX,clientY,begin,pressureValue=.5,time=performance.now(),
   const vy=prev?prev.vy+((dy/dt)-prev.vy)*response:0;
   const pressure=prev?prev.pressure+(rawPressure-prev.pressure)*Math.min(1,response*1.8):rawPressure;
   const a=prev?{x:prev.x,y:prev.y}:{x,y},b={x,y};
+  const wetAge=prev?clamp((prev.wetAge||0)+dt*Math.exp(-speed/200),0,3.5):0;
   const brush=Number(size.value);
   // A long coalesced stroke is split spatially; cap samples to avoid saturation.
   safe(()=>{
@@ -700,18 +693,18 @@ function paint(id,clientX,clientY,begin,pressureValue=.5,time=performance.now(),
       for(let i=1;i<=n;i++){
         const t0=(i-1)/n,t1=i/n;
         engine.stroke({x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0},
-          {x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1},color,brush,begin&&i===1,pressure,speed,dt/n,currentTool);
+          {x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1},color,brush,begin&&i===1,pressure,speed,dt/n,currentTool,wetAge,false);
       }
     }else{
       const n=begin?1:Math.max(1,Math.min(40,Math.ceil(dist/7)));
       for(let i=1;i<=n;i++){
         const f=i/n,sx=a.x+(x-a.x)*f,sy=a.y+(y-a.y)*f;
-        engine.drop(sx,sy,(x-a.x)/n,(y-a.y)/n,color,brush,begin&&i===1,pressure,speed,currentTool);
+        engine.drop(sx,sy,(x-a.x)/n,(y-a.y)/n,color,brush,begin&&i===1,pressure,speed,currentTool,wetAge,false,dt/n);
       }
       engine.draw();
     }
   });
-  pointers.set(id,{x,y,time,speed,vx,vy,pressure,pointerType});
+  pointers.set(id,{x,y,time,speed,vx,vy,pressure,pointerType,wetAge,lastMove:performance.now()});
   showLive(pressure,speed,pointerType);
   if(first){first=false;intro.classList.add('hide')}
 }
@@ -754,7 +747,26 @@ if('PointerEvent' in window){
 }
 function loop(now){
   const dt=lastTime?clamp((now-lastTime)/1000,0,.06):.016;lastTime=now;
-  safe(()=>engine.step(paused?0:dt));
+  if(!paused){
+    // A held pointer is a continuous source; pointermove is not required.
+    for(const [id,p] of pointers){
+      if(now-p.lastMove<40)continue;
+      const elapsed=clamp(dt,.008,.06);
+      p.speed*=Math.exp(-elapsed/.09);
+      p.vx*=Math.exp(-elapsed/.09);p.vy*=Math.exp(-elapsed/.09);
+      p.wetAge=clamp(p.wetAge+elapsed*Math.exp(-p.speed/200),0,3.5);
+      p.holdAcc=(p.holdAcc||0)+elapsed;
+      if(p.holdAcc>=1/28){
+        const doseDt=Math.min(.065,p.holdAcc);p.holdAcc=0;
+        safe(()=>{
+          const xy={x:p.x,y:p.y};
+          if(activeMode==='WebGL2')engine.stroke(xy,xy,color,Number(size.value),false,p.pressure,p.speed,doseDt,currentTool,p.wetAge,true);
+          else {engine.drop(p.x,p.y,0,0,color,Number(size.value),false,p.pressure,p.speed,currentTool,p.wetAge,true,doseDt);engine.draw();}
+        });
+      }
+    }
+    safe(()=>engine.step(dt));
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -793,7 +805,7 @@ document.getElementById('save').addEventListener('click',async()=>{
   }catch(e){console.error(e);toast('이미지 저장 실패: 화면 캡처를 이용해 주세요');}
 });
 document.addEventListener('visibilitychange',()=>{lastTime=0});
-window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.3.0',tool:currentTool,size:[canvas.width,canvas.height],
+window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.3.1',tool:currentTool,size:[canvas.width,canvas.height],
   sim:engine&&engine.simW?[engine.simW,engine.simH]:null,brush:[...pointers.values()],hadInput:!!engine?.hadInput,stroke:engine?.lastStroke||null,activity:engine?.activity??0});
 })();
 
