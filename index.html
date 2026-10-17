@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.2.6</title>
+<style>
+:root{--paper:#eae5d9;--ink:#2c2925;--muted:#867c70;--line:rgba(65,49,33,.23);--panel:rgba(246,242,233,.92);--accent:#ab5748}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{padding:0;margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
+#fluid{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#grain{pointer-events:none;position:fixed;inset:0;opacity:.20;background-image:url('data:image/svg+xml,%3Csvg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="n"%3E%3CfeTurbulence type="fractalNoise" baseFrequency=".74" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" opacity=".17" filter="url(%23n)"/%3E%3C/svg%3E');mix-blend-mode:multiply}
+.frame{pointer-events:none;position:fixed;inset:14px;border:1px solid rgba(59,46,35,.14);border-radius:2px}
+.top{position:fixed;top:max(env(safe-area-inset-top),30px);left:28px;right:26px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;gap:18px}
+.brand{display:flex;align-items:flex-start;gap:13px}.seal{width:35px;height:35px;border:1px solid var(--accent);color:var(--accent);display:grid;place-items:center;font-weight:650;font-size:18px;letter-spacing:-2px;line-height:1}.brand h1{font-family:Georgia,"Noto Serif KR",serif;letter-spacing:.25em;font-size:23px;font-weight:400;margin:1px 0 2px}.brand small{color:var(--muted);font-size:9px;letter-spacing:.19em}
+.top-right{writing-mode:vertical-rl;font-family:Georgia,serif;font-size:12px;letter-spacing:.24em;color:rgba(65,49,33,.55);padding-top:2px}
+.intro{position:fixed;left:50%;top:48%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:opacity 700ms;white-space:nowrap}.intro .kanji{font-family:Georgia,"Noto Serif CJK JP",serif;font-size:56px;font-weight:400;letter-spacing:.20em;opacity:.37}.intro .en{font-size:10px;letter-spacing:.42em;color:#8a7e70;margin-top:5px}.intro.hide{opacity:0}
+.vertical{position:fixed;right:31px;top:34%;writing-mode:vertical-rl;font-family:Georgia,serif;letter-spacing:.5em;font-size:10px;color:rgba(70,52,40,.43);pointer-events:none}
+.bottom-area{position:fixed;left:0;right:0;bottom:0;padding:0 19px calc(17px + env(safe-area-inset-bottom));pointer-events:none;display:flex;justify-content:center}
+.panel{width:min(100%,640px);border:1px solid rgba(102,82,65,.26);background:var(--panel);box-shadow:0 12px 44px rgba(51,44,31,.12);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);pointer-events:auto;padding:15px 17px 12px;border-radius:3px;touch-action:pan-y;transition:transform .25s}
+.panel-top{display:flex;justify-content:space-between;align-items:center;padding:0 0 11px;border-bottom:1px solid var(--line)}.eyebrow{font-size:10px;font-weight:600;letter-spacing:.18em;color:#655a4e}.right-tag{font-family:Georgia,serif;font-size:10px;color:var(--muted);letter-spacing:.12em}
+.palette{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0 9px}.swatch{position:relative;flex:1;max-width:39px;aspect-ratio:1;border:0;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);padding:0;cursor:pointer;transition:transform .16s}.swatch.selected{transform:scale(1.12);outline:1px solid #6d6155;outline-offset:4px}.swatch:focus-visible{outline:2px solid #a65e4c;outline-offset:4px}.swatch.water{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.98),rgba(211,228,240,.95) 42%,rgba(174,199,218,.80) 72%,rgba(142,171,194,.60) 100%);box-shadow:inset 0 0 0 1px rgba(73,101,126,.28),0 0 0 1px rgba(255,255,255,.5)}
+.custom{width:31px;height:31px;position:relative;display:grid;place-items:center;border:1px dashed #a19484;border-radius:50%;font-size:20px;font-weight:200;flex:0 0 31px;overflow:hidden;color:#76685a;cursor:pointer}.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;padding:9px 0 12px}.ctrl{min-width:0;display:flex;flex-direction:column;gap:8px}.ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.08em;color:#776a5d;white-space:nowrap}.ctrl-label b{font-family:Georgia,serif;color:#544b42;font-size:11px;font-weight:400}
+input[type=range]{appearance:none;-webkit-appearance:none;background:linear-gradient(90deg,#877263,#877263) center/100% 1px no-repeat;width:100%;height:20px;margin:0;outline:none;touch-action:pan-x}input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:100%;border:2px solid #e9e5da;background:#675a50;box-shadow:0 0 0 1px #675a50;cursor:pointer}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;border-top:1px solid var(--line);padding-top:12px}.action{border:1px solid rgba(86,70,51,.28);color:#50463e;background:transparent;min-height:35px;border-radius:2px;font-size:10px;letter-spacing:.08em;cursor:pointer}.action.primary{background:#484038;color:#f3eee4;border-color:#484038}.action:active{transform:translateY(1px)}
+.note{padding-top:8px;display:flex;justify-content:space-between;color:#948b80;font-size:9px;letter-spacing:.05em}
+#toast{position:fixed;left:50%;top:27%;transform:translateX(-50%);background:rgba(38,32,28,.82);color:#f5eee6;padding:11px 16px;border-radius:3px;letter-spacing:.03em;font-size:12px;opacity:0;transition:opacity .28s;pointer-events:none;white-space:nowrap}#toast.visible{opacity:1}
+body.night{--paper:#151e25;--ink:#ede9df;--muted:#aeb1b2;--line:rgba(230,228,216,.20);--panel:rgba(32,39,45,.89);--accent:#dc8874}
+body.night .frame{border-color:rgba(255,255,255,.13)}body.night .brand small,body.night .top-right,body.night .vertical{color:#c9c4bb}body.night .eyebrow,body.night .right-tag,body.night .ctrl-label,body.night .ctrl-label b,body.night .note{color:#d4d0ca}body.night .action{border-color:#77787a;color:#e8e2dc}body.night .action.primary{background:#d6d0c3;color:#292b2c}
+@media(max-height:650px){.panel{padding:10px 12px 8px}.controls{gap:9px;padding:4px 0 7px}.palette{padding:9px 0}.bottom-area{padding-bottom:10px}.top{top:22px}}
+@media(min-width:760px){.top{left:58px;top:44px;right:56px}.vertical{right:58px}.bottom-area{bottom:15px}.intro .kanji{font-size:80px}}
+</style>
+</head>
+<body>
+<canvas id="fluid" aria-label="터치하여 수면에 물감을 흘리는 인터랙티브 캔버스"></canvas><div id="grain"></div><div class="frame"></div>
+<header class="top"><div class="brand"><div class="seal">墨</div><div><h1>SUMI</h1><small>SUMINAGASHI · 墨流し</small></div></div><span class="top-right">色は水に溶け、時に消える</span></header>
+<div class="intro" id="intro"><div class="kanji">水 墨</div><div class="en">TOUCH THE WATER</div></div><span class="vertical">흐르는 빛, 머무는 색</span>
+<div class="bottom-area"><section class="panel" aria-label="물감 설정 및 동작">
+  <div class="panel-top"><span class="eyebrow">01 — PIGMENTS <span style="font-weight:400;color:var(--muted)">/ 색 고르기</span></span><span class="right-tag" id="color-name">SUMI / 먹빛</span></div>
+  <div class="palette" id="palette">
+  <button class="swatch selected" aria-label="먹빛" data-color="#20252a" data-label="SUMI / 먹빛" style="--c:#20252a"></button>
+  <button class="swatch water" aria-label="물(희석)" data-tool="water" data-color="__WATER__" data-label="MIZU / 물(희석)"></button>
+  <button class="swatch" aria-label="주홍" data-color="#d45046" data-label="AKANE / 주홍" style="--c:#d45046"></button>
+  <button class="swatch" aria-label="남색" data-color="#264c9d" data-label="AI / 남색" style="--c:#264c9d"></button>
+  <button class="swatch" aria-label="이끼색" data-color="#557b57" data-label="KOKE / 이끼" style="--c:#557b57"></button>
+  <button class="swatch" aria-label="자주색" data-color="#824879" data-label="MURASAKI / 자주" style="--c:#824879"></button>
+  <button class="swatch" aria-label="황금색" data-color="#d29a39" data-label="KOGANE / 금빛" style="--c:#d29a39"></button>
+  <button class="swatch" aria-label="청록색" data-color="#2f8f9b" data-label="ASAGI / 청록" style="--c:#2f8f9b"></button>
+  <label class="custom" aria-label="사용자 색상 선택">+<input id="custom-color" aria-label="사용자 색상" type="color" value="#ad5772"></label>
+  </div>
+  <div class="controls"><label class="ctrl"><span class="ctrl-label">먹방울 크기 <b id="size-val">42</b></span><input type="range" id="size" min="10" max="100" value="42"></label><label class="ctrl"><span class="ctrl-label">물의 흐름 <b id="flow-val">58</b></span><input type="range" id="flow" min="0" max="100" value="58"></label><label class="ctrl"><span class="ctrl-label">소멸 속도 <b id="fade-val">38</b></span><input type="range" id="fade" min="0" max="100" value="38"></label></div>
+  <div class="actions"><button class="action" id="clear">초기화</button><button class="action" id="pause">일시정지</button><button class="action" id="night">어두운 종이</button><button class="action primary" id="save">작품 저장 ↗</button></div>
+  <div class="note"><span id="brush-live">필압 · 속도 반응형 브러시</span><span id="engine-status">GPU / loading</span></div>
+</section></div><div id="toast" role="status"></div>
+<script>
+
+(()=>{'use strict';
+let canvas=document.getElementById('fluid');
+const status=document.getElementById('engine-status');
+const size=document.getElementById('size');
+const flow=document.getElementById('flow');
+const fade=document.getElementById('fade');
+const intro=document.getElementById('intro');
+const WATER_TOKEN='__WATER__';
+let color='#20252a',currentTool='pigment',paused=false,night=false,first=true,lastTime=0;
+const pointers=new Map();
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+const colorRGB=h=>[1,3,5].map(i=>parseInt(h.substring(i,i+2),16));
+const pigmentRGB=h=>colorRGB(h).map(v=>-Math.log(.075+.925*(v/255)));
+function toast(s){const el=document.getElementById('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),1600)}
+// SUMI v0.2.6 — clean engine assembly
+// SUMI v0.2.1 — WebGL2, GLSL ES 3.00, semi-Lagrangian incompressible 2D fluid.
+// Tuned for more natural sumi-ink pooling, soft capillary edges, and lingering stains.
+class GPUFluid {
+  constructor(canvas){
+    this.canvas=canvas;
+    const g=canvas.getContext('webgl2',{alpha:false,antialias:false,depth:false,stencil:false,
+      premultipliedAlpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
+    if(!g)throw Error('WebGL2 unavailable');
+    if(!g.getExtension('EXT_color_buffer_float'))throw Error('EXT_color_buffer_float unavailable');
+    this.g=g;this.canvas=canvas;this.lost=false;this.hadInput=false;this.time=0;this.accum=0;this.activity=0;this.idleTime=0;
+    this.programs={};this.targets=[];
+    const vertex=`#version 300 es
+      precision highp float;
+      out vec2 vUv;
+      void main(){
+        vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);
+        vUv=p;
+        gl_Position=vec4(p*2.0-1.0,0.0,1.0);
+      }`;
+    const shared=`#version 300 es
+      precision highp float;
+      precision highp sampler2D;
+      in vec2 vUv;
+      out vec4 outColor;
+      uniform vec2 uTexel;
+      vec4 sampleLinear(sampler2D s, vec2 uv, vec2 res){
+        vec2 st=clamp(uv,vec2(0.),vec2(1.))*res-.5;
+        vec2 p=floor(st), f=fract(st);
+        vec2 a=(p+.5)/res;
+        vec2 b=(p+vec2(1.5,.5))/res;
+        vec2 c=(p+vec2(.5,1.5))/res;
+        vec2 d=(p+1.5)/res;
+        return mix(mix(texture(s,clamp(a,vec2(0.),vec2(1.))),texture(s,clamp(b,vec2(0.),vec2(1.))),f.x),
+                   mix(texture(s,clamp(c,vec2(0.),vec2(1.))),texture(s,clamp(d,vec2(0.),vec2(1.))),f.x),f.y);
+      }
+      float hash12(vec2 p){
+        vec3 p3=fract(vec3(p.xyx)*.1031);
+        p3+=dot(p3,p3.yzx+33.33);
+        return fract((p3.x+p3.y)*p3.z);
+      }
+      float luma(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
+    `;
+    const fragments={
+      copy:`uniform sampler2D uTexture;uniform vec2 uSourceRes;
+        void main(){outColor=sampleLinear(uTexture,vUv,uSourceRes);}`,
+      advect:`uniform sampler2D uVelocity;uniform sampler2D uSource;
+        uniform vec2 uVelRes;uniform vec2 uSrcRes;uniform float uDt;uniform float uDecay;
+        void main(){vec2 vel=sampleLinear(uVelocity,vUv,uVelRes).xy;
+          vec2 back=clamp(vUv-uDt*vel/uVelRes,vec2(0.),vec2(1.));
+          outColor=sampleLinear(uSource,back,uSrcRes)*exp(-uDt*uDecay);
+        }`,
+      splat:`uniform sampler2D uTexture;uniform vec2 uStart;uniform vec2 uEnd;
+        uniform vec2 uScreen;uniform vec2 uImpulse;uniform float uRadius0;
+        uniform float uRadius1;uniform float uDose;uniform float uSpeed;
+        uniform float uPressure;uniform float uIsVelocity;uniform float uMode;uniform vec3 uPigment;
+        void main(){
+          vec2 p=(vUv-uStart)*uScreen, segment=(uEnd-uStart)*uScreen;
+          float tt=clamp(dot(p,segment)/max(dot(segment,segment),.0001),0.,1.);
+          vec2 offset=p-segment*tt;
+          float radius=max(1.,mix(uRadius0,uRadius1,tt));
+          float ang=atan(offset.y,offset.x);
+          float wobble=1.0+.10*sin(ang*5.0+tt*7.0)+.06*cos(ang*11.0-tt*3.7);
+          float normalized=length(offset)/max(radius*wobble,1.0);
+          float primary=exp(-2.45*normalized*normalized);
+          float fringe=exp(-8.0*(normalized-.96)*(normalized-.96))*.17;
+          float spray=exp(-1.15*normalized*normalized/2.8)*.10*clamp(uSpeed/1200.,0.,1.);
+          float mask=primary+fringe+spray;
+          vec4 previous=texture(uTexture,vUv);
+          if(uIsVelocity>.5){
+            vec2 tangential=vec2(-offset.y,offset.x)/max(radius,1.);
+            float waterBoost=mix(1.0,1.38,step(.5,uMode));
+            float wake=(.26+uPressure*.55+clamp(uSpeed/1800.,0.,1.)*.35)*waterBoost;
+            outColor=previous+vec4((uImpulse+tangential*(2.5+uSpeed*.004)*wake)*mask,0.,0.);
+          }else if(uMode>.5){
+            float diluted=clamp(uDose*(.22+uPressure*.42)*(primary+fringe*.62+spray*.24),0.,.94);
+            vec3 blur=(previous.rgb*2.0+
+              texture(uTexture,clamp(vUv+vec2(uTexel.x,0.),vec2(0.),vec2(1.))).rgb+
+              texture(uTexture,clamp(vUv-vec2(uTexel.x,0.),vec2(0.),vec2(1.))).rgb+
+              texture(uTexture,clamp(vUv+vec2(0.,uTexel.y),vec2(0.),vec2(1.))).rgb+
+              texture(uTexture,clamp(vUv-vec2(0.,uTexel.y),vec2(0.),vec2(1.))).rgb)/6.0;
+            vec3 softened=mix(previous.rgb,blur,diluted*.78)*(1.0-diluted*.58);
+            outColor=vec4(max(softened,vec3(0.0)),1.);
+          }else{
+            float deposited=uDose*(.48+uPressure*.98)*(primary+fringe*.72+spray*.45);
+            outColor=vec4(min(previous.rgb+uPigment*deposited,vec3(12.)),1.);
+          }
+        }`,
+      curl:`uniform sampler2D uVelocity;
+        void main(){vec2 L=texture(uVelocity,vUv-vec2(uTexel.x,0.)).xy;
+          vec2 R=texture(uVelocity,vUv+vec2(uTexel.x,0.)).xy;
+          vec2 B=texture(uVelocity,vUv-vec2(0.,uTexel.y)).xy;
+          vec2 T=texture(uVelocity,vUv+vec2(0.,uTexel.y)).xy;
+          outColor=vec4(.5*(R.y-L.y-T.x+B.x),0.,0.,1.);
+        }`,
+      vorticity:`uniform sampler2D uVelocity;uniform sampler2D uCurl;
+        uniform float uDt;uniform float uSwirl;uniform float uFlow;uniform float uTime;
+        void main(){
+          float L=abs(texture(uCurl,vUv-vec2(uTexel.x,0.)).x);
+          float R=abs(texture(uCurl,vUv+vec2(uTexel.x,0.)).x);
+          float B=abs(texture(uCurl,vUv-vec2(0.,uTexel.y)).x);
+          float T=abs(texture(uCurl,vUv+vec2(0.,uTexel.y)).x);
+          float C=texture(uCurl,vUv).x;
+          vec2 N=vec2(T-B,R-L);N/=length(N)+.0001;
+          vec2 confinement=vec2(N.x,-N.y)*C*uSwirl;
+          vec2 breeze=vec2(sin(vUv.y*13.+uTime*.23)+cos(vUv.x*11.-uTime*.17),
+                                 cos(vUv.x*12.-uTime*.21)-sin(vUv.y*10.+uTime*.13))*(.45+uFlow*1.35);
+          vec2 vel=texture(uVelocity,vUv).xy+(confinement+breeze)*uDt;
+          outColor=vec4(clamp(vel,vec2(-130.),vec2(130.)),0.,1.);
+        }`,
+      divergence:`uniform sampler2D uVelocity;
+        void main(){
+          vec2 C=texture(uVelocity,vUv).xy;
+          float L=texture(uVelocity,vUv-vec2(uTexel.x,0.)).x;
+          float R=texture(uVelocity,vUv+vec2(uTexel.x,0.)).x;
+          float B=texture(uVelocity,vUv-vec2(0.,uTexel.y)).y;
+          float T=texture(uVelocity,vUv+vec2(0.,uTexel.y)).y;
+          if(vUv.x<uTexel.x)L=-C.x;
+          if(vUv.x>1.-uTexel.x)R=-C.x;
+          if(vUv.y<uTexel.y)B=-C.y;
+          if(vUv.y>1.-uTexel.y)T=-C.y;
+          outColor=vec4(.5*(R-L+T-B),0.,0.,1.);
+        }`,
+      pressure:`uniform sampler2D uPressure;uniform sampler2D uDivergence;
+        void main(){
+          float L=texture(uPressure,vUv-vec2(uTexel.x,0.)).x;
+          float R=texture(uPressure,vUv+vec2(uTexel.x,0.)).x;
+          float B=texture(uPressure,vUv-vec2(0.,uTexel.y)).x;
+          float T=texture(uPressure,vUv+vec2(0.,uTexel.y)).x;
+          float div=texture(uDivergence,vUv).x;
+          outColor=vec4((L+R+B+T-div)*.25,0.,0.,1.);
+        }`,
+      gradient:`uniform sampler2D uPressure;uniform sampler2D uVelocity;
+        void main(){
+          float L=texture(uPressure,vUv-vec2(uTexel.x,0.)).x;
+          float R=texture(uPressure,vUv+vec2(uTexel.x,0.)).x;
+          float B=texture(uPressure,vUv-vec2(0.,uTexel.y)).x;
+          float T=texture(uPressure,vUv+vec2(0.,uTexel.y)).x;
+          vec2 v=texture(uVelocity,vUv).xy-.5*vec2(R-L,T-B);
+          if(vUv.x<=uTexel.x || vUv.x>=1.-uTexel.x)v.x=0.;
+          if(vUv.y<=uTexel.y || vUv.y>=1.-uTexel.y)v.y=0.;
+          outColor=vec4(v,0.,1.);
+        }`,
+      display:`uniform sampler2D uDye;uniform sampler2D uStain;uniform vec2 uDyeRes;uniform float uDark;uniform float uTime;
+        void main(){
+          vec3 dye=max(sampleLinear(uDye,vUv,uDyeRes).rgb,vec3(0.));
+          vec3 stain=max(sampleLinear(uStain,vUv,uDyeRes).rgb,vec3(0.));
+          vec3 total=dye+stain*.82;
+          vec3 Ls=max(sampleLinear(uDye,vUv-vec2(uTexel.x,0.),uDyeRes).rgb+sampleLinear(uStain,vUv-vec2(uTexel.x,0.),uDyeRes).rgb*.82,vec3(0.));
+          vec3 Rs=max(sampleLinear(uDye,vUv+vec2(uTexel.x,0.),uDyeRes).rgb+sampleLinear(uStain,vUv+vec2(uTexel.x,0.),uDyeRes).rgb*.82,vec3(0.));
+          vec3 Bs=max(sampleLinear(uDye,vUv-vec2(0.,uTexel.y),uDyeRes).rgb+sampleLinear(uStain,vUv-vec2(0.,uTexel.y),uDyeRes).rgb*.82,vec3(0.));
+          vec3 Ts=max(sampleLinear(uDye,vUv+vec2(0.,uTexel.y),uDyeRes).rgb+sampleLinear(uStain,vUv+vec2(0.,uTexel.y),uDyeRes).rgb*.82,vec3(0.));
+          float c=luma(total);
+          float gx=luma(Rs)-luma(Ls), gy=luma(Ts)-luma(Bs);
+          float grad=length(vec2(gx,gy));
+          float halo=smoothstep(.015,.42,c)*(1.0-smoothstep(.42,2.8,c));
+          float core=smoothstep(.08,1.7,c);
+          float pool=smoothstep(.9,3.8,c);
+          float edgeDark=grad*(.85+halo*1.35);
+          float grain=.94+.10*hash12(vUv*uDyeRes*1.2+uTime*.04);
+          vec3 tint=total/max(total.r+total.g+total.b,.0001);
+          tint=mix(vec3(1.),tint,clamp(c*.22,0.,.70));
+          vec3 base=mix(vec3(.933,.910,.859),vec3(.064,.102,.137),uDark);
+          if(uDark>.5){
+            float glow=1.0-exp(-c*.24);
+            vec3 warm=vec3(.96,.88,.78)*glow;
+            vec3 color=base+warm*(.55+.45*halo);
+            color+=vec3(.04,.03,.02)*pool;
+            outColor=vec4(clamp(color,0.,1.),1.);
+            return;
+          }
+          vec3 absorb=total*(.78+.46*core)+stain*(.65+.30*halo)+vec3(edgeDark*.95);
+          vec3 centerInk=base*exp(-absorb*grain);
+          vec3 feather=base*exp(-(total*.46+stain*.60)*grain)*mix(vec3(1.),tint,.58);
+          vec3 color=mix(centerInk,feather,halo*.32);
+          color=mix(color,base*exp(-absorb*1.18),pool*.35);
+          outColor=vec4(clamp(color,0.,1.),1.);
+        }`
+    };
+    for(const [key,src] of Object.entries(fragments))this.programs[key]=this.program(vertex,shared+src);
+    this.vao=g.createVertexArray();g.bindVertexArray(this.vao);
+    this.resize(true);
+    this.probe();
+  }
+  shader(type,src){const g=this.g,s=g.createShader(type);g.shaderSource(s,src);g.compileShader(s);
+    if(!g.getShaderParameter(s,g.COMPILE_STATUS)){const msg=g.getShaderInfoLog(s);g.deleteShader(s);throw Error('GLSL: '+msg)}return s;}
+  program(vs,fs){const g=this.g,v=this.shader(g.VERTEX_SHADER,vs),f=this.shader(g.FRAGMENT_SHADER,fs);
+    const p=g.createProgram();g.attachShader(p,v);g.attachShader(p,f);g.linkProgram(p);g.deleteShader(v);g.deleteShader(f);
+    if(!g.getProgramParameter(p,g.LINK_STATUS))throw Error('GLSL link: '+g.getProgramInfoLog(p));return {p,uniforms:new Map()};}
+  target(w,h){const g=this.g,tex=g.createTexture(),fbo=g.createFramebuffer();g.bindTexture(g.TEXTURE_2D,tex);
+    g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.NEAREST);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.NEAREST);
+    g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+    g.texImage2D(g.TEXTURE_2D,0,g.RGBA16F,w,h,0,g.RGBA,g.HALF_FLOAT,null);
+    g.bindFramebuffer(g.FRAMEBUFFER,fbo);g.framebufferTexture2D(g.FRAMEBUFFER,g.COLOR_ATTACHMENT0,g.TEXTURE_2D,tex,0);
+    if(g.checkFramebufferStatus(g.FRAMEBUFFER)!==g.FRAMEBUFFER_COMPLETE)throw Error('GPU floating framebuffer incomplete');
+    const t={tex,fbo,w,h};this.targets.push(t);
+    g.viewport(0,0,w,h);g.clearColor(0,0,0,0);g.clear(g.COLOR_BUFFER_BIT);return t;
+  }
+  double(w,h){const d={read:this.target(w,h),write:this.target(w,h)};d.swap=()=>{const t=d.read;d.read=d.write;d.write=t;};return d;}
+  pass(name,dst,tex={},vals={}){
+    const g=this.g,P=this.programs[name];g.useProgram(P.p);g.bindVertexArray(this.vao);
+    g.bindFramebuffer(g.FRAMEBUFFER,dst?dst.fbo:null);
+    g.viewport(0,0,dst?dst.w:this.canvas.width,dst?dst.h:this.canvas.height);
+    let slot=0;
+    for(const [key,t] of Object.entries(tex)){
+      g.activeTexture(g.TEXTURE0+slot);g.bindTexture(g.TEXTURE_2D,t.tex);
+      let u=P.uniforms.get(key);if(u===undefined){u=g.getUniformLocation(P.p,key);P.uniforms.set(key,u);}if(u!==null)g.uniform1i(u,slot);slot++;
+    }
+    for(const [key,value] of Object.entries(vals)){
+      let u=P.uniforms.get(key);if(u===undefined){u=g.getUniformLocation(P.p,key);P.uniforms.set(key,u);}if(u===null)continue;
+      if(Array.isArray(value)){
+        if(value.length===2)g.uniform2f(u,value[0],value[1]);
+        else if(value.length===3)g.uniform3f(u,value[0],value[1],value[2]);
+        else if(value.length===4)g.uniform4f(u,value[0],value[1],value[2],value[3]);
+      } else g.uniform1f(u,value);
+    }
+    g.drawArrays(g.TRIANGLES,0,3);
+  }
+  resetTargets(){const g=this.g;for(const t of this.targets){g.deleteFramebuffer(t.fbo);g.deleteTexture(t.tex)}this.targets=[];}
+  resize(initial=false){
+    const screenW=Math.max(1,window.innerWidth),screenH=Math.max(1,window.innerHeight);
+    const pixelRatio=Math.min(1.8,window.devicePixelRatio||1);
+    const bW=Math.round(screenW*pixelRatio),bH=Math.round(screenH*pixelRatio);
+    const scale=Math.min(1,208/Math.max(screenW,screenH));
+    const sw=Math.max(56,Math.round(screenW*scale)),sh=Math.max(56,Math.round(screenH*scale));
+    const dyeScale=Math.min(1,540/Math.max(screenW,screenH));
+    const dw=Math.max(96,Math.round(screenW*dyeScale)),dh=Math.max(96,Math.round(screenH*dyeScale));
+    if(this.simW===sw&&this.simH===sh&&this.dyeW===dw&&this.dyeH===dh&&this.canvas.width===bW&&this.canvas.height===bH)return;
+    const oldVelocity=this.velocity?.read,oldDye=this.dye?.read,oldStain=this.stain?.read,oldTargets=this.targets;
+    this.targets=[];
+    this.canvas.width=bW;this.canvas.height=bH;this.simW=sw;this.simH=sh;this.dyeW=dw;this.dyeH=dh;
+    this.velocity=this.double(sw,sh);this.dye=this.double(dw,dh);this.stain=this.double(dw,dh);
+    this.curl=this.target(sw,sh);this.divergence=this.target(sw,sh);this.pressure=this.double(sw,sh);
+    if(oldVelocity&&oldDye){
+      this.pass('copy',this.velocity.write,{uTexture:oldVelocity},{uSourceRes:[oldVelocity.w,oldVelocity.h]});this.velocity.swap();
+      this.pass('copy',this.dye.write,{uTexture:oldDye},{uSourceRes:[oldDye.w,oldDye.h]});this.dye.swap();
+      if(oldStain){this.pass('copy',this.stain.write,{uTexture:oldStain},{uSourceRes:[oldStain.w,oldStain.h]});this.stain.swap();}
+      for(const t of oldTargets){this.g.deleteFramebuffer(t.fbo);this.g.deleteTexture(t.tex)}
+    }
+    this.draw();
+  }
+  probe(){
+    const g=this.g,buf=new Uint8Array(4);
+    this.pass('display',null,{uDye:this.dye.read,uStain:this.stain.read},{uDyeRes:[this.dyeW,this.dyeH],uTexel:[1/this.dyeW,1/this.dyeH],uDark:0,uTime:0});
+    g.readPixels(0,0,1,1,g.RGBA,g.UNSIGNED_BYTE,buf);
+    if(g.getError()!==g.NO_ERROR||buf[0]<175||buf[3]!==255)throw Error('WebGL background validation failed '+Array.from(buf));
+    this.pass('splat',this.dye.write,{uTexture:this.dye.read},{uStart:[.5,.5],uEnd:[.5,.5],uScreen:[window.innerWidth,window.innerHeight],
+      uRadius0:22,uRadius1:22,uDose:2.0,uSpeed:0,uPressure:.8,uPigment:[2.1,2.1,2.1],uMode:0,uIsVelocity:0,uImpulse:[0,0],uTexel:[1/this.dyeW,1/this.dyeH]});
+    this.dye.swap();this.draw();
+    g.readPixels(this.canvas.width>>1,this.canvas.height>>1,1,1,g.RGBA,g.UNSIGNED_BYTE,buf);
+    if(g.getError()!==g.NO_ERROR||buf[0]>190)throw Error('WebGL pigment validation failed '+Array.from(buf));
+    this.clear();
+  }
+  clear(){
+    this.resetTargets();
+    this.velocity=this.double(this.simW,this.simH);this.dye=this.double(this.dyeW,this.dyeH);this.stain=this.double(this.dyeW,this.dyeH);
+    this.curl=this.target(this.simW,this.simH);this.divergence=this.target(this.simW,this.simH);this.pressure=this.double(this.simW,this.simH);
+    this.hadInput=false;this.activity=0;this.idleTime=0;this.draw();
+  }
+  stroke(a,b,col,radius,begin,pressure,speed,dt,tool='pigment'){
+    this.hadInput=true;this.activity=1.0;this.idleTime=0;
+    const sw=window.innerWidth,sh=window.innerHeight,dx=(b.x-a.x)*sw,dy=(b.y-a.y)*sh;
+    const narrow=1.15-.52*clamp(speed/1350,0,1);
+    const p=clamp(pressure,.05,1);
+    const base=2.2+Number(radius)*.23;
+    const isWater=(tool==='water'||col===WATER_TOKEN);
+    const r=clamp(base*narrow*(isWater?(.76+p*1.22):(.54+p*1.12)),1.6,52);
+    this.lastStroke={radiusPx:r,pressure:p,speedPxSec:speed,tool:isWater?'water':'pigment'};
+    const c=isWater?[0,0,0]:colorRGB(col).map(v=>-Math.log(.09+.91*(v/255)));
+    const dist=Math.hypot(dx,dy);
+    const vdx=clamp((dx/Math.max(.012,dt))*(this.simW/sw)*.16,-72,72);
+    const vdy=clamp((dy/Math.max(.012,dt))*(this.simH/sh)*.16,-72,72);
+    const common={uStart:[a.x,1-a.y],uEnd:[b.x,1-b.y],uScreen:[sw,sh],uSpeed:speed,uPressure:p,uPigment:c,uMode:isWater?1:0};
+    this.pass('splat',this.velocity.write,{uTexture:this.velocity.read},{...common,uRadius0:r,uRadius1:r,
+      uDose:(isWater?(begin?1.35:.95):(begin?.95:.62)),uImpulse:[vdx,vdy],uIsVelocity:1,uTexel:[1/this.simW,1/this.simH]});this.velocity.swap();
+    this.pass('splat',this.dye.write,{uTexture:this.dye.read},{...common,uRadius0:r*(isWater?1.18:.92),uRadius1:r*(isWater?1.10:1.0),
+      uDose:(isWater?(begin?1.08:.74):(begin?2.55:(.85+Math.min(2.4,dist/Math.max(r,1))*.48))),uImpulse:[0,0],uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+    this.pass('splat',this.stain.write,{uTexture:this.stain.read},{...common,uRadius0:r*(isWater?1.8:1.55),uRadius1:r*(isWater?2.0:1.8),
+      uDose:(isWater?(begin?.52:.34):(begin?1.05:.55)),uImpulse:[0,0],uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+    this.draw();
+  }
+  step(dt){
+    if(!this.hadInput||dt<=0)return;
+    this.accum=Math.min(.1,this.accum+dt);
+    this.idleTime=Math.min(12,this.idleTime+dt);
+    // Input energy should settle instead of wriggling forever.
+    const settleRate=.80+Math.pow(Number(fade.value)/100,1.20)*2.10;
+    this.activity=Math.max(0,this.activity-dt*settleRate);
+    if(this.accum<1/34)return;
+    const t=Math.min(.045,this.accum);this.accum=0;this.time+=t;
+    const tex=[1/this.simW,1/this.simH];
+    const motion=Number(flow.value)/100;
+    const activeFlow=motion*this.activity;
+    const velDecay=1.85+(1-this.activity)*5.25+Math.pow(Number(fade.value)/100,1.32)*1.65;
+    this.pass('advect',this.velocity.write,{uVelocity:this.velocity.read,uSource:this.velocity.read},
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.simW,this.simH],uDt:t,uDecay:velDecay,uTexel:tex});this.velocity.swap();
+    // Once the surface calms down, stop injecting ambient swirl.
+    if(this.activity>.01){
+      this.pass('curl',this.curl,{uVelocity:this.velocity.read},{uTexel:tex});
+      this.pass('vorticity',this.velocity.write,{uVelocity:this.velocity.read,uCurl:this.curl},
+        {uTexel:tex,uDt:t,uSwirl:(5.+motion*24.)*(.06+.94*this.activity),uFlow:activeFlow,uTime:this.time});this.velocity.swap();
+    }
+    this.pass('divergence',this.divergence,{uVelocity:this.velocity.read},{uTexel:tex});
+    for(let j=0;j<16;j++){
+      this.pass('pressure',this.pressure.write,{uPressure:this.pressure.read,uDivergence:this.divergence},{uTexel:tex});this.pressure.swap();
+    }
+    this.pass('gradient',this.velocity.write,{uVelocity:this.velocity.read,uPressure:this.pressure.read},{uTexel:tex});this.velocity.swap();
+    const fadeAmt=Math.pow(Number(fade.value)/100,1.65);
+    this.pass('advect',this.dye.write,{uVelocity:this.velocity.read,uSource:this.dye.read},
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t,uDecay:.40+fadeAmt*8.0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+    this.pass('advect',this.stain.write,{uVelocity:this.velocity.read,uSource:this.stain.read},
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t*.24,uDecay:.14+fadeAmt*6.0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+    this.draw();
+  }
+  draw(){this.pass('display',null,{uDye:this.dye.read,uStain:this.stain.read},{uDyeRes:[this.dyeW,this.dyeH],uTexel:[1/this.dyeW,1/this.dyeH],uDark:night?1:0,uTime:this.time});}
+}
+
+
+class InkSurface {
+  constructor(canvas){
+    this.canvas=canvas;
+    this.ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
+    if(!this.ctx)throw Error('Canvas2D context unavailable');
+    this.ctx.imageSmoothingEnabled=true;
+    this.time=0;this.accum=0;this.isDrawing=false;this.hadInput=false;this.activity=0;this.idleTime=0;
+    this.off=document.createElement('canvas');
+    this.offCtx=this.off.getContext('2d',{alpha:false,willReadFrequently:false});
+    this.resize();
+  }
+  resize(){
+    const cssW=Math.max(1,window.innerWidth),cssH=Math.max(1,window.innerHeight);
+    const dpr=Math.min(1.7,window.devicePixelRatio||1);
+    const bitmapW=Math.max(1,Math.round(cssW*dpr)),bitmapH=Math.max(1,Math.round(cssH*dpr));
+    const scale=Math.min(1,230/Math.max(cssW,cssH));
+    const w=Math.max(72,Math.min(176,Math.round(cssW*scale)));
+    const h=Math.max(72,Math.min(240,Math.round(cssH*scale)));
+    if(this.w===w && this.h===h && this.canvas.width===bitmapW && this.canvas.height===bitmapH)return;
+    const oldW=this.w||0,oldH=this.h||0,oldInk=this.ink,oldStain=this.stain,oldVX=this.vx,oldVY=this.vy;
+    if(this.canvas.width!==bitmapW)this.canvas.width=bitmapW;
+    if(this.canvas.height!==bitmapH)this.canvas.height=bitmapH;
+    this.ctx.imageSmoothingEnabled=true;
+    this.w=w;this.h=h;
+    this.off.width=w;this.off.height=h;
+    this.image=this.offCtx.createImageData(w,h);
+    const n=w*h;
+    this.ink=new Float32Array(n*3);this.inkNext=new Float32Array(n*3);
+    this.stain=new Float32Array(n*3);this.stainNext=new Float32Array(n*3);
+    this.vx=new Float32Array(n);this.vy=new Float32Array(n);
+    this.vxNext=new Float32Array(n);this.vyNext=new Float32Array(n);
+    if(oldW>0 && oldH>0 && oldInk){
+      for(let y=0;y<h;y++){
+        for(let x=0;x<w;x++){
+          const ox=Math.min(oldW-1,Math.floor((x+.5)*oldW/w));
+          const oy=Math.min(oldH-1,Math.floor((y+.5)*oldH/h));
+          const oldIndex=oy*oldW+ox,idx=y*w+x;
+          for(let c=0;c<3;c++){
+            this.ink[idx*3+c]=oldInk[oldIndex*3+c];
+            if(oldStain)this.stain[idx*3+c]=oldStain[oldIndex*3+c];
+          }
+          this.vx[idx]=oldVX[oldIndex]*w/oldW;
+          this.vy[idx]=oldVY[oldIndex]*h/oldH;
+        }
+      }
+    }
+    this.draw();
+  }
+  clear(){this.ink.fill(0);this.inkNext.fill(0);this.stain.fill(0);this.stainNext.fill(0);this.vx.fill(0);this.vy.fill(0);this.vxNext.fill(0);this.vyNext.fill(0);this.activity=0;this.idleTime=0;this.hadInput=false;this.draw()}
+  drop(x,y,dx,dy,col,radius,begin,pressure=.5,speed=0,tool='pigment'){
+    const w=this.w,h=this.h;
+    const cx=x*w,cy=y*h;
+    const isWater=(tool==='water'||col===WATER_TOKEN);
+    const dynamic=(1.17-.54*Math.min(1,speed/1350))*(isWater?(.72+1.10*pressure):(.54+1.06*pressure));
+    const r=clamp((2.9+radius*.17)*Math.min(w,h)/125*dynamic,1.2,Math.min(w,h)*.19);
+    const pigment=isWater?[0,0,0]:pigmentRGB(col),R=Math.ceil(r*2.45),r2=r*r;
+    const stainR=r*(isWater?1.95:1.75), stainBox=Math.ceil(stainR*2.1), stainR2=stainR*stainR;
+    const impulseX=clamp(dx*w*22,-46,46),impulseY=clamp(dy*h*22,-46,46);
+    for(let iy=Math.max(0,Math.floor(cy-stainBox));iy<=Math.min(h-1,Math.ceil(cy+stainBox));iy++){
+      for(let ix=Math.max(0,Math.floor(cx-stainBox));ix<=Math.min(w-1,Math.ceil(cx+stainBox));ix++){
+        const px=ix+.5-cx,py=iy+.5-cy,d2=px*px+py*py;
+        const idx=iy*w+ix,j=idx*3;
+        const ang=Math.atan2(py,px);
+        const edge=.90+.08*Math.sin(ang*7+this.time*.8)+.04*Math.cos(ang*13-this.time*.7);
+        if(d2<=R*R){
+          const t=d2/(r2*edge*edge),shape=Math.exp(-t*1.35);
+          const fringe=Math.exp(-7*Math.pow(Math.max(0,Math.sqrt(d2)/Math.max(r,1)-.92),2));
+          if(isWater){
+            const dilute=clamp((shape*.86+fringe*.20)*(begin?.46:.24)*(.72+pressure*.62),0,.92);
+            this.ink[j]=Math.max(0,this.ink[j]*(1-dilute));
+            this.ink[j+1]=Math.max(0,this.ink[j+1]*(1-dilute));
+            this.ink[j+2]=Math.max(0,this.ink[j+2]*(1-dilute));
+            const swirl=(begin?7.8:4.6)*(shape+fringe*.45)*(.8+speed/1500);
+            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.54-py/(r+1)*swirl,-58,58);
+            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.54+px/(r+1)*swirl,-58,58);
+          }else{
+            const dose=(shape*.92+fringe*.16)*(begin?1.95:.60)*(.70+pressure*.76);
+            this.ink[j]=clamp(this.ink[j]+dose*pigment[0],0,8);
+            this.ink[j+1]=clamp(this.ink[j+1]+dose*pigment[1],0,8);
+            this.ink[j+2]=clamp(this.ink[j+2]+dose*pigment[2],0,8);
+            const swirl=(begin?5.2:2.4)*(shape+fringe*.35)*(.7+speed/1800);
+            this.vx[idx]=clamp(this.vx[idx]+impulseX*shape*.36-py/(r+1)*swirl,-58,58);
+            this.vy[idx]=clamp(this.vy[idx]+impulseY*shape*.36+px/(r+1)*swirl,-58,58);
+          }
+        }
+        if(d2<=stainR2){
+          const t2=d2/(stainR2*edge*edge);
+          if(isWater){
+            const soak=clamp(Math.exp(-t2*.95)*(begin?.24:.14)*(.62+pressure*.42),0,.65);
+            this.stain[j]=Math.max(0,this.stain[j]*(1-soak));
+            this.stain[j+1]=Math.max(0,this.stain[j+1]*(1-soak));
+            this.stain[j+2]=Math.max(0,this.stain[j+2]*(1-soak));
+          }else{
+            const soak=Math.exp(-t2*.95)*(begin?.88:.40)*(.62+pressure*.45);
+            this.stain[j]=clamp(this.stain[j]+soak*pigment[0],0,6);
+            this.stain[j+1]=clamp(this.stain[j+1]+soak*pigment[1],0,6);
+            this.stain[j+2]=clamp(this.stain[j+2]+soak*pigment[2],0,6);
+          }
+        }
+      }
+    }
+    this.hadInput=true;this.activity=1.0;this.idleTime=0;
+  }
+  advance(dt){
+    this.time+=dt;
+    this.idleTime=Math.min(12,this.idleTime+dt);
+    const fadeNorm=Number(fade.value)/100;
+    const settleRate=.74+Math.pow(fadeNorm,1.20)*1.95;
+    this.activity=Math.max(0,this.activity-dt*settleRate);
+    const w=this.w,h=this.h,src=this.ink,dst=this.inkNext,stainSrc=this.stain,stainDst=this.stainNext;
+    const vx=this.vx,vy=this.vy,nvx=this.vxNext,nvy=this.vyNext;
+    const motion=Number(flow.value)/100;
+    const activeFlow=motion*this.activity;
+    const evaporation=(.24+Math.pow(fadeNorm,1.72)*5.8)*dt;
+    const persist=Math.exp(-evaporation);
+    const stainPersist=Math.exp(-(.11+Math.pow(fadeNorm,1.62)*3.4)*dt);
+    const viscosity=Math.exp(-dt*(3.4+(1-this.activity)*8.0+fadeNorm*1.4));
+    const diffusion=clamp(dt*(.08+.26*activeFlow),0,.032);
+    const stainDiffusion=clamp(dt*(.16+.40*activeFlow),0,.060);
+    for(let y=0;y<h;y++){
+      const yw=y*w;
+      for(let x=0;x<w;x++){
+        const i=yw+x,k=i*3;
+        const fx=activeFlow*(2.2*Math.sin(y*.047+this.time*.52)+1.0*Math.cos((y+x)*.026-this.time*.3));
+        const fy=activeFlow*(2.0*Math.cos(x*.049-this.time*.47)-1.0*Math.sin((x-y)*.031+this.time*.4));
+        const px=clamp(x-(vx[i]+fx)*dt,0,w-1.001);
+        const py=clamp(y-(vy[i]+fy)*dt,0,h-1.001);
+        const spx=clamp(x-(vx[i]*.30+fx*.55)*dt,0,w-1.001);
+        const spy=clamp(y-(vy[i]*.30+fy*.55)*dt,0,h-1.001);
+        const x0=px|0,y0=py|0,x1=Math.min(x0+1,w-1),y1=Math.min(y0+1,h-1);
+        const sx0=spx|0,sy0=spy|0,sx1=Math.min(sx0+1,w-1),sy1=Math.min(sy0+1,h-1);
+        const tx=px-x0,ty=py-y0,t00=1-tx,t01=1-ty;
+        const stx=spx-sx0,sty=spy-sy0,s00=1-stx,s01=1-sty;
+        const a=y0*w+x0,b=y0*w+x1,c=y1*w+x0,d=y1*w+x1;
+        const sa=sy0*w+sx0,sb=sy0*w+sx1,sc=sy1*w+sx0,sd=sy1*w+sx1;
+        const wa=t00*t01,wb=tx*t01,wc=t00*ty,wd=tx*ty;
+        const swa=s00*s01,swb=stx*s01,swc=s00*sty,swd=stx*sty;
+        nvx[i]=(vx[a]*wa+vx[b]*wb+vx[c]*wc+vx[d]*wd)*viscosity;
+        nvy[i]=(vy[a]*wa+vy[b]*wb+vy[c]*wc+vy[d]*wd)*viscosity;
+        const ak=a*3,bk=b*3,ck=c*3,dk=d*3, sak=sa*3,sbk=sb*3,sck=sc*3,sdk=sd*3;
+        for(let channel=0;channel<3;channel++){
+          let v=src[ak+channel]*wa+src[bk+channel]*wb+src[ck+channel]*wc+src[dk+channel]*wd;
+          const l=x>0?src[k-3+channel]:src[k+channel];
+          const r=x<w-1?src[k+3+channel]:src[k+channel];
+          const u=y>0?src[k-w*3+channel]:src[k+channel];
+          const dd=y<h-1?src[k+w*3+channel]:src[k+channel];
+          v+=diffusion*((l+r+u+dd)*.25-v);
+          dst[k+channel]=Math.max(0,v*persist);
+          let sv=stainSrc[sak+channel]*swa+stainSrc[sbk+channel]*swb+stainSrc[sck+channel]*swc+stainSrc[sdk+channel]*swd;
+          const sl=x>0?stainSrc[k-3+channel]:stainSrc[k+channel];
+          const sr=x<w-1?stainSrc[k+3+channel]:stainSrc[k+channel];
+          const su=y>0?stainSrc[k-w*3+channel]:stainSrc[k+channel];
+          const sdv=y<h-1?stainSrc[k+w*3+channel]:stainSrc[k+channel];
+          sv+=stainDiffusion*((sl+sr+su+sdv)*.25-sv);
+          stainDst[k+channel]=Math.max(0,sv*stainPersist);
+        }
+      }
+    }
+    [this.ink,this.inkNext]=[this.inkNext,this.ink];
+    [this.stain,this.stainNext]=[this.stainNext,this.stain];
+    [this.vx,this.vxNext]=[this.vxNext,this.vx];
+    [this.vy,this.vyNext]=[this.vyNext,this.vy];
+  }
+  draw(){
+    const data=this.image.data,ink=this.ink,stain=this.stain,w=this.w,h=this.h;
+    const dark=night;
+    const base=dark?[16,26,35]:[238,232,219];
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const i=y*w+x,j=i*3,u=i*4;
+        let a=ink[j],b=ink[j+1],c=ink[j+2];
+        let sa=stain[j],sb=stain[j+1],sc=stain[j+2];
+        if(dark){
+          const strength=1-Math.exp(-((a+b+c)+(sa+sb+sc)*.8)*.18);
+          data[u]=Math.round(base[0]+(244-base[0])*strength);
+          data[u+1]=Math.round(base[1]+(224-base[1])*strength);
+          data[u+2]=Math.round(base[2]+(196-base[2])*strength);
+          data[u+3]=255;continue;
+        }
+        const totalA=a+sa*.82,totalB=b+sb*.82,totalC=c+sc*.82;
+        const sum=(totalA+totalB+totalC)/3;
+        const leftIdx=(y*w+Math.max(0,x-1))*3,rightIdx=(y*w+Math.min(w-1,x+1))*3;
+        const upIdx=(Math.max(0,y-1)*w+x)*3,dnIdx=(Math.min(h-1,y+1)*w+x)*3;
+        const left=(ink[leftIdx]+ink[leftIdx+1]+ink[leftIdx+2]+(stain[leftIdx]+stain[leftIdx+1]+stain[leftIdx+2])*.82)/3;
+        const right=(ink[rightIdx]+ink[rightIdx+1]+ink[rightIdx+2]+(stain[rightIdx]+stain[rightIdx+1]+stain[rightIdx+2])*.82)/3;
+        const up=(ink[upIdx]+ink[upIdx+1]+ink[upIdx+2]+(stain[upIdx]+stain[upIdx+1]+stain[upIdx+2])*.82)/3;
+        const down=(ink[dnIdx]+ink[dnIdx+1]+ink[dnIdx+2]+(stain[dnIdx]+stain[dnIdx+1]+stain[dnIdx+2])*.82)/3;
+        const grad=Math.hypot(right-left,down-up);
+        const halo=clamp((sum-.02)/.40,0,1)*clamp((2.7-sum)/2.2,0,1);
+        const core=clamp((sum-.08)/1.5,0,1);
+        const pool=clamp((sum-.95)/2.8,0,1);
+        const absorbR=(totalA*(.78+.46*core)+sa*(.65+.30*halo)+grad*.95);
+        const absorbG=(totalB*(.78+.46*core)+sb*(.65+.30*halo)+grad*.95);
+        const absorbB=(totalC*(.78+.46*core)+sc*(.65+.30*halo)+grad*.95);
+        let r=base[0]*Math.exp(-absorbR*(.95+Math.sin((x*17+y*13+this.time*27))*.02));
+        let g=base[1]*Math.exp(-absorbG*(.95+Math.cos((x*11+y*19+this.time*21))*.02));
+        let bb=base[2]*Math.exp(-absorbB*(.95+Math.sin((x*7+y*23+this.time*19))*.02));
+        const tintSum=Math.max(totalA+totalB+totalC,.0001);
+        const tintR=totalA/tintSum,tintG=totalB/tintSum,tintB=totalC/tintSum;
+        const featherMix=halo*.32;
+        r=r*(1-featherMix)+(base[0]*Math.exp(-(totalA*.46+sa*.60))*((1-.58)+tintR*.58))*featherMix;
+        g=g*(1-featherMix)+(base[1]*Math.exp(-(totalB*.46+sb*.60))*((1-.58)+tintG*.58))*featherMix;
+        bb=bb*(1-featherMix)+(base[2]*Math.exp(-(totalC*.46+sc*.60))*((1-.58)+tintB*.58))*featherMix;
+        r=r*(1-pool*.35)+base[0]*Math.exp(-absorbR*1.18)*(pool*.35);
+        g=g*(1-pool*.35)+base[1]*Math.exp(-absorbG*1.18)*(pool*.35);
+        bb=bb*(1-pool*.35)+base[2]*Math.exp(-absorbB*1.18)*(pool*.35);
+        data[u]=Math.max(0,Math.min(255,Math.round(r)));
+        data[u+1]=Math.max(0,Math.min(255,Math.round(g)));
+        data[u+2]=Math.max(0,Math.min(255,Math.round(bb)));
+        data[u+3]=255;
+      }
+    }
+    this.offCtx.putImageData(this.image,0,0);
+    const ctx=this.ctx;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(this.off,0,0,this.canvas.width,this.canvas.height);
+  }
+  step(dt){
+    if(dt<=0)return;
+    this.accum=Math.min(.15,this.accum+dt);
+    const interval=1/30;
+    if(this.accum>=interval){
+      const s=Math.min(.052,this.accum);this.accum=0;
+      if(this.hadInput)this.advance(s);
+      this.draw();
+    }
+  }
+}
+
+
+let engine=null,activeMode='';
+function useCPU(reason){
+  console.warn('SUMI WebGL recovery:',reason);
+  const fresh=document.createElement('canvas');fresh.id='fluid';fresh.setAttribute('aria-label','터치하여 먹물을 흘리는 캔버스');
+  canvas.replaceWith(fresh);canvas=fresh;
+  engine=new InkSurface(canvas);activeMode='Canvas2D';status.textContent='Canvas2D · 안전 모드';
+  if(reason)toast('GPU 호환 문제: 안전 모드로 전환했습니다');
+}
+function boot(){
+  const candidate=document.createElement('canvas');candidate.id='fluid';
+  try{
+    const gpu=new GPUFluid(candidate);
+    canvas.replaceWith(candidate);canvas=candidate;engine=gpu;activeMode='WebGL2';
+    status.textContent='WebGL2 · NAVIER–STOKES';
+    canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();if(activeMode==='WebGL2')useCPU('context lost')});
+  }catch(err){console.warn('GPU init:',err);useCPU(String(err));}
+}
+boot();
+function safe(action){if(!engine)return;
+  try{return action();}catch(err){console.error('SUMI rendering:',err);
+    if(activeMode==='WebGL2'){useCPU(String(err));return;}status.textContent='Canvas 렌더링 오류';toast('렌더링 오류가 발생했습니다');}}
+const canvasTarget=e=>{
+  const t=e.target;
+  return t===canvas||t===document.body||t===document.documentElement||!!(t.closest&&t.closest('#grain, .frame, .intro, .vertical, .top'));
+};
+const showLive=(pressure,speed,rad)=>{
+  const el=document.getElementById('brush-live');
+  el.textContent=`압력 ${Math.round(pressure*100)}% · ${Math.round(speed)}px/s`;
+};
+function paint(id,clientX,clientY,begin,pressureValue=.5,time=performance.now()){
+  if(!engine)return;
+  const rect=canvas.getBoundingClientRect();
+  const x=clamp((clientX-rect.left)/Math.max(1,rect.width),0,1);
+  const y=clamp((clientY-rect.top)/Math.max(1,rect.height),0,1);
+  let prev=pointers.get(id);if(!begin&&!prev)return;
+  const rawPressure=clamp(pressureValue>0?pressureValue:.5,.05,1);
+  const prevTime=prev?prev.time:time-16;
+  const dt=clamp((time-prevTime)/1000,.008,.10);
+  const distance=prev?Math.hypot((x-prev.x)*rect.width,(y-prev.y)*rect.height):0;
+  const rawSpeed=clamp(distance/dt,0,3600);
+  const speed=prev?prev.speed*.42+rawSpeed*.58:0;
+  const pressure=prev?prev.pressure*.25+rawPressure*.75:rawPressure;
+  const a=prev?{x:prev.x,y:prev.y}:{x,y};const b={x,y};
+  const brush=Number(size.value);
+  safe(()=>{
+    if(activeMode==='WebGL2')engine.stroke(a,b,color,brush,begin,pressure,speed,dt,currentTool);
+    else {
+      const len=Math.hypot(x-a.x,y-a.y);
+      const n=begin?1:Math.max(1,Math.min(55,Math.ceil(len/.008)));
+      for(let i=1;i<=n;i++){
+        const f=i/n,sx=a.x+(x-a.x)*f,sy=a.y+(y-a.y)*f;
+        engine.drop(sx,sy,(x-a.x)/n,(y-a.y)/n,color,brush,begin&&i===1,pressure,speed,currentTool);
+      }
+      engine.draw();
+    }
+  });
+  pointers.set(id,{x,y,time,speed,pressure});
+  showLive(pressure,speed);
+  if(first){first=false;intro.classList.add('hide')}
+}
+if('PointerEvent' in window){
+  document.addEventListener('pointerdown',e=>{
+    if(!canvasTarget(e))return;e.preventDefault();paint(e.pointerId,e.clientX,e.clientY,true,e.pressure,e.timeStamp);
+  },{passive:false});
+  document.addEventListener('pointermove',e=>{
+    if(!pointers.has(e.pointerId))return;e.preventDefault();
+    // Coalesced input points preserve stylus pressure and motion direction.
+    const samples=e.getCoalescedEvents?e.getCoalescedEvents():[];
+    if(samples.length){for(const sample of samples.slice(-8))paint(e.pointerId,sample.clientX,sample.clientY,false,sample.pressure,sample.timeStamp);}
+    else paint(e.pointerId,e.clientX,e.clientY,false,e.pressure,e.timeStamp);
+  },{passive:false});
+  ['pointerup','pointercancel'].forEach(name=>document.addEventListener(name,e=>pointers.delete(e.pointerId)));
+}else{
+  document.addEventListener('touchstart',e=>{if(!canvasTarget(e.target))return;e.preventDefault();
+    for(const t of e.changedTouches)paint(t.identifier,t.clientX,t.clientY,true,t.force||.5,e.timeStamp);
+  },{passive:false});
+  document.addEventListener('touchmove',e=>{if(!pointers.size)return;e.preventDefault();
+    for(const t of e.changedTouches)paint(t.identifier,t.clientX,t.clientY,false,t.force||.5,e.timeStamp);
+  },{passive:false});
+  ['touchend','touchcancel'].forEach(name=>document.addEventListener(name,e=>{
+    for(const t of e.changedTouches)pointers.delete(t.identifier);
+  }));
+  let held=false;
+  document.addEventListener('mousedown',e=>{if(!canvasTarget(e))return;held=true;paint('mouse',e.clientX,e.clientY,true,.5,e.timeStamp)});
+  document.addEventListener('mousemove',e=>{if(held)paint('mouse',e.clientX,e.clientY,false,.5,e.timeStamp)});
+  document.addEventListener('mouseup',()=>{held=false;pointers.delete('mouse')});
+}
+function loop(now){
+  const dt=lastTime?clamp((now-lastTime)/1000,0,.06):.016;lastTime=now;
+  safe(()=>engine.step(paused?0:dt));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+let resizeTimer;
+window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>safe(()=>engine.resize()),220)});
+function selectSwatch(el){document.querySelectorAll('.swatch').forEach(e=>e.classList.remove('selected'));
+  if(el){el.classList.add('selected');currentTool=el.dataset.tool==='water'?'water':'pigment';color=el.dataset.color||'#20252a';document.getElementById('color-name').textContent=el.dataset.label;}}
+document.querySelectorAll('.swatch').forEach(el=>el.addEventListener('click',()=>selectSwatch(el)));
+document.getElementById('custom-color').addEventListener('input',e=>{
+  selectSwatch(null);currentTool='pigment';color=e.target.value;document.getElementById('color-name').textContent='CUSTOM / 직접 선택';
+  document.querySelector('.custom').style.background=color;
+});
+for(const key of ['size','flow','fade'])document.getElementById(key).addEventListener('input',e=>
+  document.getElementById(key+'-val').textContent=e.target.value);
+document.getElementById('clear').addEventListener('click',()=>safe(()=>{engine.clear();toast('새로운 수면이 펼쳐졌습니다')}));
+document.getElementById('pause').addEventListener('click',e=>{
+  paused=!paused;e.target.textContent=paused?'계속 재생':'일시정지';toast(paused?'시간이 멈췄습니다':'다시 흐르기 시작합니다');
+});
+document.getElementById('night').addEventListener('click',e=>{
+  night=!night;document.body.classList.toggle('night',night);e.target.textContent=night?'밝은 종이':'어두운 종이';safe(()=>engine.draw());
+});
+document.getElementById('save').addEventListener('click',async()=>{
+  try{
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw Error('PNG encode error');
+    if(window.AndroidBridge&&window.AndroidBridge.savePng){
+      const reader=new FileReader();reader.onload=()=>window.AndroidBridge.savePng(String(reader.result).split(',')[1]);
+      reader.readAsDataURL(blob);toast('이미지를 저장하고 있습니다');return;
+    }
+    const file=new File([blob],'SUMI.png',{type:'image/png'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:'SUMI 墨流し'});return;
+    }
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+    a.download='SUMI_'+new Date().toISOString().replace(/[:.]/g,'-')+'.png';document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1600);toast('PNG 저장을 요청했습니다');
+  }catch(e){console.error(e);toast('이미지 저장 실패: 화면 캡처를 이용해 주세요');}
+});
+document.addEventListener('visibilitychange',()=>{lastTime=0});
+window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.2.6',tool:currentTool,size:[canvas.width,canvas.height],
+  sim:engine&&engine.simW?[engine.simW,engine.simH]:null,brush:[...pointers.values()],hadInput:!!engine?.hadInput,stroke:engine?.lastStroke||null});
+})();
+
+</script>
+</body></html>
