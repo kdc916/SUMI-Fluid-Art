@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.3.1</title>
+<meta name="theme-color" content="#ebe7db"><title>SUMI · 墨流し v0.5.0</title>
 <style>
 :root{--paper:#eae5d9;--ink:#2c2925;--muted:#867c70;--line:rgba(65,49,33,.23);--panel:rgba(246,242,233,.92);--accent:#ab5748}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{padding:0;margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
@@ -17,7 +17,7 @@
 .bottom-area{position:fixed;left:0;right:0;bottom:0;padding:0 19px calc(17px + env(safe-area-inset-bottom));pointer-events:none;display:flex;justify-content:center}
 .panel{width:min(100%,640px);border:1px solid rgba(102,82,65,.26);background:var(--panel);box-shadow:0 12px 44px rgba(51,44,31,.12);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);pointer-events:auto;padding:15px 17px 12px;border-radius:3px;touch-action:pan-y;transition:transform .25s}
 .panel-top{display:flex;justify-content:space-between;align-items:center;padding:0 0 11px;border-bottom:1px solid var(--line)}.eyebrow{font-size:10px;font-weight:600;letter-spacing:.18em;color:#655a4e}.right-tag{font-family:Georgia,serif;font-size:10px;color:var(--muted);letter-spacing:.12em}
-.palette{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0 9px}.swatch{position:relative;flex:1;max-width:39px;aspect-ratio:1;border:0;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);padding:0;cursor:pointer;transition:transform .16s}.swatch.selected{transform:scale(1.12);outline:1px solid #6d6155;outline-offset:4px}.swatch:focus-visible{outline:2px solid #a65e4c;outline-offset:4px}.swatch.water{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.98),rgba(211,228,240,.95) 42%,rgba(174,199,218,.80) 72%,rgba(142,171,194,.60) 100%);box-shadow:inset 0 0 0 1px rgba(73,101,126,.28),0 0 0 1px rgba(255,255,255,.5)}
+.mode-strip{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0 2px;padding:3px;border:1px solid rgba(102,82,65,.24);background:rgba(128,115,90,.06);border-radius:5px}.mode-button{border:0;min-height:34px;background:transparent;color:#786d63;border-radius:3px;cursor:pointer;font-size:12px;letter-spacing:.04em;font-weight:600}.mode-button.active{background:#49413a;color:#f6f0e8;box-shadow:0 2px 8px rgba(40,34,30,.18)}.mode-hint{font-size:10px;line-height:1.5;color:#8c8074;margin:6px 0 0;min-height:15px}body.night .mode-button{color:#c1bbb3}body.night .mode-button.active{color:#272827;background:#d6d0c3}body.night .mode-hint{color:#c1bbb3}.palette{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0 9px}.swatch{position:relative;flex:1;max-width:39px;aspect-ratio:1;border:0;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);padding:0;cursor:pointer;transition:transform .16s}.swatch.selected{transform:scale(1.12);outline:1px solid #6d6155;outline-offset:4px}.swatch:focus-visible{outline:2px solid #a65e4c;outline-offset:4px}.swatch.water{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.98),rgba(211,228,240,.95) 42%,rgba(174,199,218,.80) 72%,rgba(142,171,194,.60) 100%);box-shadow:inset 0 0 0 1px rgba(73,101,126,.28),0 0 0 1px rgba(255,255,255,.5)}
 .custom{width:31px;height:31px;position:relative;display:grid;place-items:center;border:1px dashed #a19484;border-radius:50%;font-size:20px;font-weight:200;flex:0 0 31px;overflow:hidden;color:#76685a;cursor:pointer}.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .controls{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;padding:9px 0 12px}.ctrl{min-width:0;display:flex;flex-direction:column;gap:8px}.ctrl-label{display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.08em;color:#776a5d;white-space:nowrap}.ctrl-label b{font-family:Georgia,serif;color:#544b42;font-size:11px;font-weight:400}
 input[type=range]{appearance:none;-webkit-appearance:none;background:linear-gradient(90deg,#877263,#877263) center/100% 1px no-repeat;width:100%;height:20px;margin:0;outline:none;touch-action:pan-x}input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:100%;border:2px solid #e9e5da;background:#675a50;box-shadow:0 0 0 1px #675a50;cursor:pointer}
@@ -36,6 +36,11 @@ body.night .frame{border-color:rgba(255,255,255,.13)}body.night .brand small,bod
 <div class="intro" id="intro"><div class="kanji">水 墨</div><div class="en">TOUCH THE WATER</div></div><span class="vertical">흐르는 빛, 머무는 색</span>
 <div class="bottom-area"><section class="panel" aria-label="물감 설정 및 동작">
   <div class="panel-top"><span class="eyebrow">01 — PIGMENTS <span style="font-weight:400;color:var(--muted)">/ 색 고르기</span></span><span class="right-tag" id="color-name">SUMI / 먹빛</span></div>
+  <div class="mode-strip" role="group" aria-label="렌더링 모드">
+    <button class="mode-button active" type="button" data-ink-style="fluid" aria-pressed="true">流 · Fluid / 유체</button>
+    <button class="mode-button" type="button" data-ink-style="sumi" aria-pressed="false">墨 · Sumi / 수묵</button>
+  </div>
+  <div id="mode-hint" class="mode-hint" aria-live="polite">유체 물감 · 소용돌이와 색상 혼합</div>
   <div class="palette" id="palette">
   <button class="swatch selected" aria-label="먹빛" data-color="#20252a" data-label="SUMI / 먹빛" style="--c:#20252a"></button>
   <button class="swatch water" aria-label="물(희석)" data-tool="water" data-color="__WATER__" data-label="MIZU / 물(희석)"></button>
@@ -61,13 +66,17 @@ const flow=document.getElementById('flow');
 const fade=document.getElementById('fade');
 const intro=document.getElementById('intro');
 const WATER_TOKEN='__WATER__';
-let color='#20252a',currentTool='pigment',paused=false,night=false,first=true,lastTime=0;
+let inkStyle='fluid',color='#20252a',currentTool='pigment',paused=false,night=false,first=true,lastTime=0;
 const pointers=new Map();
 const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const hash2=(x,y)=>{const n=Math.sin(x*127.1+y*311.7)*43758.5453123;return n-Math.floor(n)};
+const noise2=(x,y)=>{const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);const a=hash2(ix,iy),b=hash2(ix+1,iy),c=hash2(ix,iy+1),d=hash2(ix+1,iy+1);return lerp(lerp(a,b,u),lerp(c,d,u),v)};
+const fbm2=(x,y,oct=4)=>{let s=0,a=.5,fx=x,fy=y;for(let i=0;i<oct;i++){s+=noise2(fx,fy)*a;fx=fx*2.03+17.13;fy=fy*2.01+9.37;a*=.5}return s};
 const colorRGB=h=>[1,3,5].map(i=>parseInt(h.substring(i,i+2),16));
 const pigmentRGB=h=>colorRGB(h).map(v=>-Math.log(.075+.925*(v/255)));
 function toast(s){const el=document.getElementById('toast');el.textContent=s;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),1600)}
-// SUMI v0.3.1 — flowing ink, continuous wet contact, pressure & velocity-sensitive deposition
+// SUMI v0.5.0 — ink-wash refinement, blooming hold, soft feather edges, paper absorption
 // SUMI v0.2.1 — WebGL2, GLSL ES 3.00, semi-Lagrangian incompressible 2D fluid.
 // Tuned for more natural sumi-ink pooling, soft capillary edges, and lingering stains.
 class GPUFluid {
@@ -122,7 +131,7 @@ class GPUFluid {
       splat:`uniform sampler2D uTexture;uniform vec2 uStart;uniform vec2 uEnd;
         uniform vec2 uScreen;uniform vec2 uImpulse;uniform float uRadius0;
         uniform float uRadius1;uniform float uDose;uniform float uSpeed;
-        uniform float uPressure;uniform float uIsVelocity;uniform float uMode;uniform float uRadial;uniform vec3 uPigment;
+        uniform float uPressure;uniform float uIsVelocity;uniform float uMode;uniform float uRadial;uniform float uStyle;uniform vec3 uPigment;
         void main(){
           vec2 p=(vUv-uStart)*uScreen, segment=(uEnd-uStart)*uScreen;
           float tt=clamp(dot(p,segment)/max(dot(segment,segment),.0001),0.,1.);
@@ -130,11 +139,17 @@ class GPUFluid {
           float radius=max(1.,mix(uRadius0,uRadius1,tt));
           float ang=atan(offset.y,offset.x);
           float wobble=1.0+.10*sin(ang*5.0+tt*7.0)+.06*cos(ang*11.0-tt*3.7);
-          float normalized=length(offset)/max(radius*wobble,1.0);
+          float paperFib=hash12(floor(vUv*uScreen*.70));
+          float paperCloud=hash12(floor(vUv*uScreen*.19+vec2(31.4,11.8)));
+          float edgeRough=clamp(1.0+.35*(paperCloud-.5)+.43*(paperFib-.5),.65,1.38);
+          float normalized=length(offset)/max(radius*wobble*mix(1.0,edgeRough,uStyle),1.0);
           float primary=exp(-2.45*normalized*normalized);
           float fringe=exp(-8.0*(normalized-.96)*(normalized-.96))*.17;
           float spray=exp(-1.15*normalized*normalized/2.8)*.10*clamp(uSpeed/1200.,0.,1.);
           float mask=primary+fringe+spray;
+          float brushFibre=clamp(.68+paperFib*.58+paperCloud*.20,0.,1.55);
+          float wash=exp(-.92*normalized*normalized)*.25;
+          float rimPool=exp(-12.0*(normalized-.92)*(normalized-.92));
           vec4 previous=texture(uTexture,vUv);
           if(uIsVelocity>.5){
             // Tangential stirring from a stationary pointer looked like an endless whirl.
@@ -158,6 +173,14 @@ class GPUFluid {
             outColor=vec4(max(softened,vec3(0.0)),1.);
           }else{
             float deposited=uDose*(.48+uPressure*.98)*(primary+fringe*.72+spray*.45);
+            // Traditional wash: a dense sumi core, paper-grain gaps and a capillary outer ring.
+            if(uStyle>.5){
+              float styleStain=clamp((uRadius0/max(radius,1.)-1.0)*1.85,0.,1.0);
+              float fibre=brushFibre*(1.0-.25*styleStain);
+              float sumiCore=primary*(.70+.30*fibre)+rimPool*(.14+.20*styleStain);
+              float sumiWash=wash*(.26+.30*styleStain)*(paperCloud*.5+.75);
+              deposited=uDose*(.50+uPressure*.98)*(sumiCore+sumiWash)*(.78+.28*fibre);
+            }
             outColor=vec4(min(previous.rgb+uPigment*deposited,vec3(12.)),1.);
           }
         }`,
@@ -169,6 +192,22 @@ class GPUFluid {
                   texture(uTexture,vUv+vec2(0.,uTexel.y)).rgb+
                   texture(uTexture,vUv-vec2(0.,uTexel.y)).rgb)*.25;
           outColor=vec4(max(mix(c,n,uBlend),vec3(0.)),1.);
+        }`,
+      capillary:`uniform sampler2D uTexture;uniform float uBlend;
+        void main(){
+          vec3 c=max(texture(uTexture,vUv).rgb,vec3(0.));
+          vec2 pos=vUv/uTexel;
+          float seed=hash12(floor(pos*.21));
+          float fiber=hash12(floor(pos*.47+vec2(31.7,7.3)));
+          vec2 lean=normalize(vec2(.85,.45)+vec2(seed-.5,fiber-.5)*.68);
+          vec2 d=normalize(lean+vec2(.0001))*uTexel;
+          vec3 along=(max(texture(uTexture,clamp(vUv+d,vec2(0.),vec2(1.))).rgb,vec3(0.))+
+            max(texture(uTexture,clamp(vUv-d,vec2(0.),vec2(1.))).rgb,vec3(0.)))*.5;
+          vec3 across=(max(texture(uTexture,clamp(vUv+vec2(-d.y,d.x),vec2(0.),vec2(1.))).rgb,vec3(0.))+
+            max(texture(uTexture,clamp(vUv-vec2(-d.y,d.x),vec2(0.),vec2(1.))).rgb,vec3(0.)))*.5;
+          vec3 target=mix(across,along,.74);
+          float capillary=uBlend*(.55+seed*.65);
+          outColor=vec4(max(mix(c,target,capillary),vec3(0.)),1.);
         }`,
       curl:`uniform sampler2D uVelocity;
         void main(){vec2 L=texture(uVelocity,vUv-vec2(uTexel.x,0.)).xy;
@@ -225,7 +264,7 @@ class GPUFluid {
           if(vUv.y<=uTexel.y || vUv.y>=1.-uTexel.y)v.y=0.;
           outColor=vec4(v,0.,1.);
         }`,
-      display:`uniform sampler2D uDye;uniform sampler2D uStain;uniform vec2 uDyeRes;uniform float uDark;uniform float uTime;
+      display:`uniform sampler2D uDye;uniform sampler2D uStain;uniform vec2 uDyeRes;uniform float uDark;uniform float uTime;uniform float uStyle;
         void main(){
           vec3 dye=max(sampleLinear(uDye,vUv,uDyeRes).rgb,vec3(0.));
           vec3 stain=max(sampleLinear(uStain,vUv,uDyeRes).rgb,vec3(0.));
@@ -244,6 +283,32 @@ class GPUFluid {
           float grain=.94+.10*hash12(vUv*uDyeRes*1.2+uTime*.04);
           vec3 tint=total/max(total.r+total.g+total.b,.0001);
           tint=mix(vec3(1.),tint,clamp(c*.22,0.,.70));
+          if(uStyle>.5){
+            // Sumi-specific Beer-Lambert ink density, kasure (dry gaps), nijimi (feathering),
+            // tamari (dark collected pigment at wet boundaries). Grain uses stable paper coordinates.
+            vec2 ip=vUv*uDyeRes;
+            float fiber=hash12(floor(ip*1.40+vec2(11.3,31.9)));
+            float tooth=hash12(floor(ip*.44+vec2(4.7,19.8)));
+            float fibers=hash12(floor(ip*.17+vec2(33.1,2.7)));
+            float grain=(fiber-.5)*.45+(tooth-.5)*.30+(fibers-.5)*.25;
+            float density=dot(dye,vec3(.28,.56,.16))+luma(stain)*1.18;
+            float low=smoothstep(.015,.50,density)*(1.0-smoothstep(.70,3.2,density));
+            float edgePool=smoothstep(.014,.23,grad)*(1.0-smoothstep(.70,3.3,density));
+            float gap=1.0-smoothstep(.0,.60,hash12(floor(ip*2.4+vec2(2.1,18.7))));
+            float kasure=.18*(1.0-smoothstep(.05,.85,density))+.075*gap;
+            vec3 absorp=dye*(1.10+.34*grain-kasure)+stain*(.77+.16*tooth);
+            absorp+=vec3(edgePool*(.46+.28*tooth));
+            absorp=max(absorp,vec3(0.));
+            vec3 paper=mix(vec3(.950,.940,.916),vec3(.080,.090,.102),uDark);
+            if(uDark>.5){
+              float bright=1.0-exp(-density*.27);
+              outColor=vec4(clamp(paper+vec3(.86,.80,.70)*bright,vec3(0.),vec3(1.)),1.);return;
+            }
+            vec3 washColor=paper*exp(-absorp*(.80+.22*fiber));
+            vec3 greyWash=paper*exp(-(dye*.38+stain*.89)*(1.0+.22*grain));
+            washColor=mix(washColor,greyWash,clamp(low*.36,0.,.55));
+            outColor=vec4(clamp(washColor,vec3(0.),vec3(1.)),1.);return;
+          }
           vec3 base=mix(vec3(.933,.910,.859),vec3(.064,.102,.137),uDark);
           if(uDark>.5){
             float glow=1.0-exp(-c*.24);
@@ -346,6 +411,7 @@ class GPUFluid {
     const sw=window.innerWidth,sh=window.innerHeight,dx=(b.x-a.x)*sw,dy=(b.y-a.y)*sh;
     const p=clamp(pressure,.04,1),wet=clamp(wetAge,0,3.5);
     const isWater=(tool==='water'||col===WATER_TOKEN);
+    const sumi=inkStyle==='sumi';
     // Slow strokes broaden gradually; fast strokes narrow even under identical force.
     const slow=1.0/(1.0+Math.pow(speed/260,1.15));
     const dwellGrowth=1.0+Math.min(1.28,wet*.66);
@@ -356,17 +422,18 @@ class GPUFluid {
     const dist=Math.hypot(dx,dy);
     const vdx=begin||holding?0:clamp(dx/Math.max(.008,dt)*(this.simW/sw)*.16,-56,56);
     const vdy=begin||holding?0:clamp(dy/Math.max(.008,dt)*(this.simH/sh)*.16,-56,56);
-    const common={uStart:[a.x,1-a.y],uEnd:[b.x,1-b.y],uScreen:[sw,sh],uSpeed:speed,uPressure:p,uPigment:c,uMode:isWater?1:0};
+    const common={uStart:[a.x,1-a.y],uEnd:[b.x,1-b.y],uScreen:[sw,sh],uSpeed:speed,uPressure:p,uPigment:c,uMode:isWater?1:0,uStyle:sumi?1:0};
     // Each additional stationary frame feeds ink into the pool, not another hard marker dab.
-    const amount=holding?clamp(dt,.015,.06)*3.8:(begin?.55:(.18+Math.min(1.4,dist/Math.max(r,1))*.16));
-    const radial=holding?(2.8+Number(flow.value)*.028)*clamp(dt,.012,.06)*18:begin?1.6:Math.min(1.2,dist/Math.max(5,r))*.32;
+    const amount=holding?clamp(dt,.015,.06)*(4.9+wet*.34):(begin?.74:(.26+Math.min(1.55,dist/Math.max(r,1))*.19));
+    const styledAmount=amount*(sumi?(isWater?1.0:.68):1.0);
+    const radial=holding?(5.2+Number(flow.value)*.045+wet*.48)*clamp(dt,.012,.06)*22:begin?2.2:Math.min(1.4,dist/Math.max(5,r))*.40;
     this.pass('splat',this.velocity.write,{uTexture:this.velocity.read},{...common,uRadius0:r,uRadius1:r,
       uDose:0,uImpulse:[vdx,vdy],uRadial:radial,uIsVelocity:1,uTexel:[1/this.simW,1/this.simH]});this.velocity.swap();
     this.pass('splat',this.dye.write,{uTexture:this.dye.read},{...common,uRadius0:r*(isWater?1.18:.90),uRadius1:r,
-      uDose:amount*(isWater?1.12:1.0),uImpulse:[0,0],uRadial:0,uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
-    if(!holding||wet>.45){
+      uDose:styledAmount*(isWater?1.18:(holding?.72:1.0)),uImpulse:[0,0],uRadial:0,uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+    if(!holding||wet>.20){
       this.pass('splat',this.stain.write,{uTexture:this.stain.read},{...common,uRadius0:r*(isWater?1.8:1.35),uRadius1:r*(isWater?1.9:1.4),
-        uDose:amount*(isWater?.25:.10),uImpulse:[0,0],uRadial:0,uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+        uDose:styledAmount*(isWater?.34:(sumi?.43:(holding?.34:.18))),uImpulse:[0,0],uRadial:0,uIsVelocity:0,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
     }
     this.draw();
   }
@@ -379,7 +446,7 @@ class GPUFluid {
     this.accum=Math.min(.1,this.accum+dt);
     this.idleTime=Math.min(12,this.idleTime+dt);
     // Input energy should settle instead of wriggling forever.
-    const settleRate=.66;
+    const settleRate=.46;
     this.activity=Math.max(0,this.activity-dt*settleRate);
     if(this.accum<1/34)return;
     const t=Math.min(.045,this.accum);this.accum=0;this.time+=t;
@@ -387,7 +454,7 @@ class GPUFluid {
     const motion=Number(flow.value)/100;
     const activeFlow=motion*this.activity;
     // Viscous decay lets a dragged surface coast briefly before settling.
-    const velDecay=.65+(1-this.activity)*1.45;
+    const velDecay=.42+(1-this.activity)*1.08;
     this.pass('advect',this.velocity.write,{uVelocity:this.velocity.read,uSource:this.velocity.read},
       {uVelRes:[this.simW,this.simH],uSrcRes:[this.simW,this.simH],uDt:t,uDecay:velDecay,uTexel:tex});this.velocity.swap();
     // Once the surface calms down, stop injecting ambient swirl.
@@ -403,15 +470,21 @@ class GPUFluid {
     this.pass('gradient',this.velocity.write,{uVelocity:this.velocity.read,uPressure:this.pressure.read},{uTexel:tex});this.velocity.swap();
     const fadeAmt=Math.pow(Number(fade.value)/100,3.0);
     this.pass('advect',this.dye.write,{uVelocity:this.velocity.read,uSource:this.dye.read},
-      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t,uDecay:.052+fadeAmt*2.45,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t,uDecay:.026+fadeAmt*1.65,uTexel:[1/this.dyeW,1/this.dyeH]});this.dye.swap();
     // Isotropic pigment diffusion remains active even once the fluid velocity settles.
     this.pass('diffuse',this.dye.write,{uTexture:this.dye.read},
-      {uTexel:[1/this.dyeW,1/this.dyeH],uBlend:clamp(t*(3.0+6.0*motion),0,.32)});this.dye.swap();
+      {uTexel:[1/this.dyeW,1/this.dyeH],uBlend:clamp(t*(5.3+9.8*motion+2.8*this.activity),0,.52)});this.dye.swap();
     this.pass('advect',this.stain.write,{uVelocity:this.velocity.read,uSource:this.stain.read},
-      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t*.18,uDecay:.025+fadeAmt*1.65,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+      {uVelRes:[this.simW,this.simH],uSrcRes:[this.dyeW,this.dyeH],uDt:t*.24,uDecay:.010+fadeAmt*1.05,uTexel:[1/this.dyeW,1/this.dyeH]});this.stain.swap();
+    this.pass('diffuse',this.stain.write,{uTexture:this.stain.read},
+      {uTexel:[1/this.dyeW,1/this.dyeH],uBlend:clamp(t*(1.8+3.1*motion+1.5*this.activity),0,.22)});this.stain.swap();
+    if(inkStyle==='sumi'){
+      this.pass('capillary',this.stain.write,{uTexture:this.stain.read},
+        {uTexel:[1/this.dyeW,1/this.dyeH],uBlend:clamp(t*(3.8+4.2*motion),0,.36)});this.stain.swap();
+    }
     this.draw();
   }
-  draw(){this.pass('display',null,{uDye:this.dye.read,uStain:this.stain.read},{uDyeRes:[this.dyeW,this.dyeH],uTexel:[1/this.dyeW,1/this.dyeH],uDark:night?1:0,uTime:this.time});}
+  draw(){this.pass('display',null,{uDye:this.dye.read,uStain:this.stain.read},{uDyeRes:[this.dyeW,this.dyeH],uTexel:[1/this.dyeW,1/this.dyeH],uDark:night?1:0,uTime:this.time,uStyle:inkStyle==='sumi'?1:0});}
 }
 
 
@@ -442,6 +515,8 @@ class InkSurface {
     this.off.width=w;this.off.height=h;
     this.image=this.offCtx.createImageData(w,h);
     const n=w*h;
+    this.paper=new Float32Array(n);this.paperEdge=new Float32Array(n);this.fibers=new Float32Array(n);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;const coarse=fbm2(x*.095,y*.095,4);const fine=fbm2(x*.32+17.2,y*.32+9.1,3);this.paper[i]=.86+coarse*.22+fine*.08;this.paperEdge[i]=.72+coarse*.28+fine*.12;this.fibers[i]=fbm2(x*.23+17,y*.42+33,3);}
     this.ink=new Float32Array(n*3);this.inkNext=new Float32Array(n*3);
     this.stain=new Float32Array(n*3);this.stainNext=new Float32Array(n*3);
     this.vx=new Float32Array(n);this.vy=new Float32Array(n);
@@ -465,7 +540,7 @@ class InkSurface {
   }
   clear(){this.ink.fill(0);this.inkNext.fill(0);this.stain.fill(0);this.stainNext.fill(0);this.vx.fill(0);this.vy.fill(0);this.vxNext.fill(0);this.vyNext.fill(0);this.activity=0;this.idleTime=0;this.hadInput=false;this.draw()}
   drop(x,y,dx,dy,col,radius,begin,pressure=.5,speed=0,tool='pigment',wetAge=0,holding=false,dt=.033){
-    const w=this.w,h=this.h,cx=x*w,cy=y*h,water=tool==='water'||col===WATER_TOKEN;
+    const w=this.w,h=this.h,cx=x*w,cy=y*h,water=tool==='water'||col===WATER_TOKEN,sumi=inkStyle==='sumi';
     const slow=1/(1+Math.pow(speed/260,1.15));
     const growth=1+Math.min(1.28,wetAge*.66);
     const pressureScale=water?(.74+Math.pow(pressure,.67)*.65):(.62+Math.pow(pressure,.68)*.70);
@@ -474,12 +549,15 @@ class InkSurface {
     const r=clamp(screenR*Math.min(w,h)/Math.min(window.innerWidth,window.innerHeight),1.0,Math.min(w,h)*.24);
     const stainR=r*(water?2.0:1.4),R=Math.ceil(stainR*2.1),pigment=water?[0,0,0]:pigmentRGB(col);
     const dxSim=clamp(dx*w*24,-48,48),dySim=clamp(dy*h*24,-48,48);
-    const dose=holding?clamp(dt,.015,.06)*.76:begin?.44:.23;
-    const radialStrength=holding?(1.25+Number(flow.value)*.017):begin?.75:.24;
+    const dose=(holding?clamp(dt,.015,.06)*(1.05+wetAge*.08):begin?.60:.29)*(sumi&&!water?.74:1);
+    const radialStrength=holding?(2.35+Number(flow.value)*.028+wetAge*.14):begin?.98:.32;
     for(let iy=Math.max(0,Math.floor(cy-R));iy<=Math.min(h-1,Math.ceil(cy+R));iy++){
       for(let ix=Math.max(0,Math.floor(cx-R));ix<=Math.min(w-1,Math.ceil(cx+R));ix++){
         const px=ix+.5-cx,py=iy+.5-cy,d=Math.hypot(px,py),id=iy*w+ix,k=id*3;
-        const ang=Math.atan2(py,px),edge=.95+.035*Math.sin(7*ang+this.time*.6);
+        const ang=Math.atan2(py,px);
+        const paperDist=this.paperEdge[id];
+        const edge=(.95+.035*Math.sin(7*ang+this.time*.6))*(sumi?
+          (.57+.53*paperDist+.22*this.fibers[id]+.12*Math.sin(9*ang+1.4)+.05*Math.sin(19*ang+4.6)):1);
         const rr=d/Math.max(r*edge,.01),core=Math.exp(-1.75*rr*rr);
         if(d<=r*2.1){
           const ring=Math.exp(-2.6*(rr-.76)*(rr-.76))*(1-Math.exp(-rr*rr*18));
@@ -491,12 +569,13 @@ class InkSurface {
             const dilute=clamp(dose*(.20+pressure*.32)*core*1.9,0,.6);
             for(let c=0;c<3;c++)this.ink[k+c]*=1-dilute;
           }else{
-            for(let c=0;c<3;c++)this.ink[k+c]=Math.min(9,this.ink[k+c]+dose*(.65+pressure*.4)*core*pigment[c]);
+            for(let c=0;c<3;c++){const inkMul=holding?.54:.72;const grain=sumi?(this.fibers[id]*.36+this.paper[id]*.58):1;
+            this.ink[k+c]=Math.min(9,this.ink[k+c]+dose*(inkMul+pressure*.36)*(core*.82+ring*.18)*pigment[c]*grain);}
           }
         }
         if(d<stainR*2){
           const mask=Math.exp(-.95*Math.pow(d/Math.max(stainR,.01),2));
-          const stainDose=dose*(water?.25:.10)*mask;
+          const stainDose=dose*(water?.34:(sumi?.51:(holding?.36:.19)))*mask*(sumi?(.68+this.paperEdge[id]*.35):1);
           for(let c=0;c<3;c++){
             if(water)this.stain[k+c]*=1-clamp(stainDose,0,.30);
             else this.stain[k+c]=Math.min(5,this.stain[k+c]+stainDose*pigment[c]);
@@ -514,18 +593,19 @@ class InkSurface {
     this.time+=dt;
     this.idleTime=Math.min(12,this.idleTime+dt);
     const fadeNorm=Number(fade.value)/100;
-    const settleRate=.64;
+    const settleRate=.44;
     this.activity=Math.max(0,this.activity-dt*settleRate);
     const w=this.w,h=this.h,src=this.ink,dst=this.inkNext,stainSrc=this.stain,stainDst=this.stainNext;
     const vx=this.vx,vy=this.vy,nvx=this.vxNext,nvy=this.vyNext;
     const motion=Number(flow.value)/100;
     const activeFlow=motion*this.activity;
-    const evaporation=(.052+Math.pow(fadeNorm,3.0)*2.45)*dt;
+    const evaporation=(.026+Math.pow(fadeNorm,3.0)*1.65)*dt;
     const persist=Math.exp(-evaporation);
-    const stainPersist=Math.exp(-(.025+Math.pow(fadeNorm,3.0)*1.65)*dt);
-    const viscosity=Math.exp(-dt*(.95+(1-this.activity)*1.75));
-    const diffusion=clamp(dt*(3.4+7.0*motion),0,.33);
-    const stainDiffusion=clamp(dt*(.40+.80*motion),0,.055);
+    const stainPersist=Math.exp(-(.010+Math.pow(fadeNorm,3.0)*1.05)*dt);
+    const viscosity=Math.exp(-dt*(.58+(1-this.activity)*1.18));
+    const diffusion=clamp(dt*(5.4+10.0*motion+2.6*this.activity),0,.52);
+    const stainDiffusion=clamp(dt*(1.9+2.6*motion+0.9*this.activity),0,.22);
+    const capillary=inkStyle==='sumi';
     for(let y=0;y<h;y++){
       const yw=y*w;
       for(let x=0;x<w;x++){
@@ -559,7 +639,11 @@ class InkSurface {
           const sr=x<w-1?stainSrc[k+3+channel]:stainSrc[k+channel];
           const su=y>0?stainSrc[k-w*3+channel]:stainSrc[k+channel];
           const sdv=y<h-1?stainSrc[k+w*3+channel]:stainSrc[k+channel];
-          sv+=stainDiffusion*((sl+sr+su+sdv)*.25-sv);
+          if(capillary){
+            const fiber=(this.fibers[i]-.5)*.45;
+            const anisotropic=(sl*(.24-fiber*.24)+sr*(.24+fiber*.24)+su*.16+sdv*.36);
+            sv+=Math.min(.42,dt*(5.2+motion*4.0))*(anisotropic-sv)*(.70+this.paperEdge[i]*.30);
+          } else sv+=stainDiffusion*((sl+sr+su+sdv)*.25-sv);
           stainDst[k+channel]=Math.max(0,sv*stainPersist);
         }
       }
@@ -570,7 +654,7 @@ class InkSurface {
     [this.vy,this.vyNext]=[this.vyNext,this.vy];
   }
   draw(){
-    const data=this.image.data,ink=this.ink,stain=this.stain,w=this.w,h=this.h;
+    const data=this.image.data,ink=this.ink,stain=this.stain,w=this.w,h=this.h,paper=this.paper,paperEdge=this.paperEdge;
     const dark=night;
     const base=dark?[16,26,35]:[238,232,219];
     for(let y=0;y<h;y++){
@@ -585,33 +669,66 @@ class InkSurface {
           data[u+2]=Math.round(base[2]+(196-base[2])*strength);
           data[u+3]=255;continue;
         }
-        const totalA=a+sa*.82,totalB=b+sb*.82,totalC=c+sc*.82;
+        if(inkStyle==='sumi'){
+          const paperTooth=paper[i], grain=this.fibers[i];
+          const total=(a+b+c)/3+(sa+sb+sc)*.36;
+          // Irregular capillary edge; samples come from stored concentration, not frame noise.
+          const lx=x>0?i-1:i,rx=x<w-1?i+1:i,uy=y>0?i-w:i,dy=y<h-1?i+w:i;
+          const conc=k=>(ink[k*3]+ink[k*3+1]+ink[k*3+2])/3+
+            (stain[k*3]+stain[k*3+1]+stain[k*3+2])*.36;
+          const grad=Math.hypot(conc(rx)-conc(lx),conc(dy)-conc(uy));
+          const feather=clamp((total-.02)/.44,0,1)*clamp((2.5-total)/2.1,0,1);
+          const rim=clamp(grad*1.35,0,1)*clamp((3.0-total)/2.2,0,1);
+          const gap=clamp(1-(total-.08)/.44,0,1)*(.22+.44*(grain-.25));
+          for(let ch=0;ch<3;ch++){
+            const floating=ink[j+ch], deposited=stain[j+ch];
+            const pigmentFront=clamp((floating+deposited*.70-.12+(grain-.5)*.16)*1.55,0,1);
+            const pooling=rim*(.26+.50*pigmentFront)*(.65+.46*paperTooth);
+            const density=Math.max(0,(floating*(1.20+.36*(paperTooth-1)-gap)+deposited*(.86+.40*grain)+pooling));
+            const wash=(floating*.40+deposited*.90)*(1+.13*(paperTooth-.5));
+            const full=base[ch]*Math.exp(-density);
+            const light=base[ch]*Math.exp(-Math.max(0,wash));
+            data[u+ch]=Math.max(0,Math.min(255,Math.round(lerp(full,light,feather*.29))));
+          }
+          data[u+3]=255;
+          continue;
+        }
+        const totalA=a+sa*1.08,totalB=b+sb*1.08,totalC=c+sc*1.08;
         const sum=(totalA+totalB+totalC)/3;
+        const dyeSum=(a+b+c)/3, stainSum=(sa+sb+sc)/3;
         const leftIdx=(y*w+Math.max(0,x-1))*3,rightIdx=(y*w+Math.min(w-1,x+1))*3;
         const upIdx=(Math.max(0,y-1)*w+x)*3,dnIdx=(Math.min(h-1,y+1)*w+x)*3;
-        const left=(ink[leftIdx]+ink[leftIdx+1]+ink[leftIdx+2]+(stain[leftIdx]+stain[leftIdx+1]+stain[leftIdx+2])*.82)/3;
-        const right=(ink[rightIdx]+ink[rightIdx+1]+ink[rightIdx+2]+(stain[rightIdx]+stain[rightIdx+1]+stain[rightIdx+2])*.82)/3;
-        const up=(ink[upIdx]+ink[upIdx+1]+ink[upIdx+2]+(stain[upIdx]+stain[upIdx+1]+stain[upIdx+2])*.82)/3;
-        const down=(ink[dnIdx]+ink[dnIdx+1]+ink[dnIdx+2]+(stain[dnIdx]+stain[dnIdx+1]+stain[dnIdx+2])*.82)/3;
+        const left=(ink[leftIdx]+ink[leftIdx+1]+ink[leftIdx+2]+(stain[leftIdx]+stain[leftIdx+1]+stain[leftIdx+2])*1.08)/3;
+        const right=(ink[rightIdx]+ink[rightIdx+1]+ink[rightIdx+2]+(stain[rightIdx]+stain[rightIdx+1]+stain[rightIdx+2])*1.08)/3;
+        const up=(ink[upIdx]+ink[upIdx+1]+ink[upIdx+2]+(stain[upIdx]+stain[upIdx+1]+stain[upIdx+2])*1.08)/3;
+        const down=(ink[dnIdx]+ink[dnIdx+1]+ink[dnIdx+2]+(stain[dnIdx]+stain[dnIdx+1]+stain[dnIdx+2])*1.08)/3;
         const grad=Math.hypot(right-left,down-up);
-        const halo=clamp((sum-.02)/.40,0,1)*clamp((2.7-sum)/2.2,0,1);
-        const core=clamp((sum-.08)/1.5,0,1);
-        const pool=clamp((sum-.95)/2.8,0,1);
-        const absorbR=(totalA*(.78+.46*core)+sa*(.65+.30*halo)+grad*.95);
-        const absorbG=(totalB*(.78+.46*core)+sb*(.65+.30*halo)+grad*.95);
-        const absorbB=(totalC*(.78+.46*core)+sc*(.65+.30*halo)+grad*.95);
-        let r=base[0]*Math.exp(-absorbR*(.95+Math.sin((x*17+y*13+this.time*27))*.02));
-        let g=base[1]*Math.exp(-absorbG*(.95+Math.cos((x*11+y*19+this.time*21))*.02));
-        let bb=base[2]*Math.exp(-absorbB*(.95+Math.sin((x*7+y*23+this.time*19))*.02));
+        const halo=clamp((stainSum-.010)/.36,0,1)*clamp((2.6-sum)/2.1,0,1);
+        const core=clamp((dyeSum-.03)/1.45,0,1);
+        const pool=clamp((dyeSum+stainSum*.55-.65)/2.9,0,1);
+        const rim=clamp(grad*1.8,0,1.4)*clamp((2.2-sum)/1.9,0,1);
+        const tooth=paper[i], feather=paperEdge[i];
         const tintSum=Math.max(totalA+totalB+totalC,.0001);
         const tintR=totalA/tintSum,tintG=totalB/tintSum,tintB=totalC/tintSum;
-        const featherMix=halo*.32;
-        r=r*(1-featherMix)+(base[0]*Math.exp(-(totalA*.46+sa*.60))*((1-.58)+tintR*.58))*featherMix;
-        g=g*(1-featherMix)+(base[1]*Math.exp(-(totalB*.46+sb*.60))*((1-.58)+tintG*.58))*featherMix;
-        bb=bb*(1-featherMix)+(base[2]*Math.exp(-(totalC*.46+sc*.60))*((1-.58)+tintB*.58))*featherMix;
-        r=r*(1-pool*.35)+base[0]*Math.exp(-absorbR*1.18)*(pool*.35);
-        g=g*(1-pool*.35)+base[1]*Math.exp(-absorbG*1.18)*(pool*.35);
-        bb=bb*(1-pool*.35)+base[2]*Math.exp(-absorbB*1.18)*(pool*.35);
+        const absorbR=(totalA*(.78+.34*core)+sa*(.72+.25*halo)+rim*(.26+.56*halo))*(.86+.20*tooth+.10*feather);
+        const absorbG=(totalB*(.78+.34*core)+sb*(.72+.25*halo)+rim*(.26+.56*halo))*(.86+.20*tooth+.10*feather);
+        const absorbB=(totalC*(.78+.34*core)+sc*(.72+.25*halo)+rim*(.26+.56*halo))*(.86+.20*tooth+.10*feather);
+        let r=base[0]*Math.exp(-absorbR*.93);
+        let g=base[1]*Math.exp(-absorbG*.93);
+        let bb=base[2]*Math.exp(-absorbB*.93);
+        const softMix=clamp(halo*.70+stainSum*.20,0,.88);
+        const sr=base[0]*Math.exp(-(totalA*.34+sa*.92)*(1.0+.18*tooth));
+        const sg=base[1]*Math.exp(-(totalB*.34+sb*.92)*(1.0+.18*tooth));
+        const sbb=base[2]*Math.exp(-(totalC*.34+sc*.92)*(1.0+.18*tooth));
+        r=lerp(r,sr,softMix); g=lerp(g,sg,softMix); bb=lerp(bb,sbb,softMix);
+        const er=base[0]*Math.exp(-(totalA*.96+sa*.42+rim*1.65)*(1.0+.10*tooth));
+        const eg=base[1]*Math.exp(-(totalB*.96+sb*.42+rim*1.65)*(1.0+.10*tooth));
+        const ebb=base[2]*Math.exp(-(totalC*.96+sc*.42+rim*1.65)*(1.0+.10*tooth));
+        const edgeMix=clamp(rim*.60+core*.18,0,.82);
+        r=lerp(r,er,edgeMix); g=lerp(g,eg,edgeMix); bb=lerp(bb,ebb,edgeMix);
+        const tintMix=clamp(sum*.12,0,.25);
+        r=lerp(r,r*((1-.28)+tintR*.28),tintMix); g=lerp(g,g*((1-.28)+tintG*.28),tintMix); bb=lerp(bb,bb*((1-.28)+tintB*.28),tintMix);
+        r=lerp(r,r*.96,pool*.25); g=lerp(g,g*.96,pool*.25); bb=lerp(bb,bb*.96,pool*.25);
         data[u]=Math.max(0,Math.min(255,Math.round(r)));
         data[u+1]=Math.max(0,Math.min(255,Math.round(g)));
         data[u+2]=Math.max(0,Math.min(255,Math.round(bb)));
@@ -772,6 +889,18 @@ function loop(now){
 requestAnimationFrame(loop);
 let resizeTimer;
 window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>safe(()=>engine.resize()),220)});
+function switchInkStyle(next){
+  if(next!== 'fluid'&&next!=='sumi')return;
+  inkStyle=next;
+  document.querySelectorAll('.mode-button').forEach(b=>{
+    const selected=b.dataset.inkStyle===next;
+    b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
+  });
+  const hint=document.getElementById('mode-hint');
+  hint.textContent=next==='fluid'?'유체 물감 · 소용돌이와 색상 혼합':'수묵 먹 · 농담·화선지 결·모세관 번짐';
+  safe(()=>engine.draw());
+}
+document.querySelectorAll('.mode-button').forEach(el=>el.addEventListener('click',()=>switchInkStyle(el.dataset.inkStyle)));
 function selectSwatch(el){document.querySelectorAll('.swatch').forEach(e=>e.classList.remove('selected'));
   if(el){el.classList.add('selected');currentTool=el.dataset.tool==='water'?'water':'pigment';color=el.dataset.color||'#20252a';document.getElementById('color-name').textContent=el.dataset.label;}}
 document.querySelectorAll('.swatch').forEach(el=>el.addEventListener('click',()=>selectSwatch(el)));
@@ -805,7 +934,7 @@ document.getElementById('save').addEventListener('click',async()=>{
   }catch(e){console.error(e);toast('이미지 저장 실패: 화면 캡처를 이용해 주세요');}
 });
 document.addEventListener('visibilitychange',()=>{lastTime=0});
-window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.3.1',tool:currentTool,size:[canvas.width,canvas.height],
+window.SUMI_DIAGNOSTICS=()=>({engine:activeMode,webgl:activeMode==='WebGL2',version:'0.5.0',style:inkStyle,tool:currentTool,size:[canvas.width,canvas.height],
   sim:engine&&engine.simW?[engine.simW,engine.simH]:null,brush:[...pointers.values()],hadInput:!!engine?.hadInput,stroke:engine?.lastStroke||null,activity:engine?.activity??0});
 })();
 
